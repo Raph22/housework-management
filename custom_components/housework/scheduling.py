@@ -46,12 +46,12 @@ def calculate_next_due(
         else:
             return today
 
-    next_due = _advance_one_period(base, task)
+    next_due = advance_one_period(base, task)
 
     # For fixed scheduling: advance past today if in the past
     if task.scheduling_mode == SchedulingMode.FIXED:
         while next_due < today:
-            next_due = _advance_one_period(next_due, task)
+            next_due = advance_one_period(next_due, task)
 
     return next_due
 
@@ -102,7 +102,7 @@ def calculate_initial_due(
     return today
 
 
-def _advance_one_period(base: date, task: Task) -> date:
+def advance_one_period(base: date, task: Task) -> date:
     """Advance a date by one period of the task's frequency."""
     freq = task.frequency_type
     value = task.frequency_value
@@ -174,44 +174,62 @@ def _next_matching_weekday(from_date: date, weekdays: list[int]) -> date:
     return from_date
 
 
-def format_frequency(task: Task) -> str:
-    """Return a human-readable frequency string for a task."""
+def format_frequency(task: Task, translations: dict | None = None) -> str:
+    """Return a human-readable frequency string for a task.
+
+    Args:
+        task: The task to format.
+        translations: Optional dict from translations/xx.json "frequency" key.
+            If None, falls back to English defaults.
+    """
+    t = translations or {}
     freq = task.frequency_type
     value = task.frequency_value
 
     if freq == FrequencyType.ONCE:
-        return "Once"
+        return t.get("once", "Once")
 
     if freq == FrequencyType.DAILY:
         if value == 1:
-            return "Daily"
-        return f"Every {value} days"
+            return t.get("daily", "Daily")
+        template = t.get("every_n_days", "Every {n} days")
+        return template.format(n=value)
 
     if freq == FrequencyType.WEEKLY:
         if value == 1:
-            return "Weekly"
-        return f"Every {value} weeks"
+            return t.get("weekly", "Weekly")
+        template = t.get("every_n_weeks", "Every {n} weeks")
+        return template.format(n=value)
 
     if freq == FrequencyType.MONTHLY:
         if value == 1:
             suffix = ""
             if task.frequency_day_of_month:
-                suffix = f" (day {task.frequency_day_of_month})"
-            return f"Monthly{suffix}"
-        return f"Every {value} months"
+                day_template = t.get("day_suffix", " (day {day})")
+                suffix = day_template.format(day=task.frequency_day_of_month)
+            return t.get("monthly", "Monthly") + suffix
+        template = t.get("every_n_months", "Every {n} months")
+        return template.format(n=value)
 
     if freq == FrequencyType.DAY_OF_WEEK:
-        day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        day_names_default = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        day_names = t.get("day_names", day_names_default)
         days = [day_names[d] for d in sorted(task.frequency_days_of_week) if 0 <= d <= 6]
-        return f"Every {', '.join(days)}" if days else "Weekly"
+        if days:
+            template = t.get("every_days", "Every {days}")
+            return template.format(days=", ".join(days))
+        return t.get("weekly", "Weekly")
 
-    if freq == FrequencyType.CUSTOM_DAYS:
-        return f"Every {value} days"
+    if freq in (FrequencyType.CUSTOM_DAYS,):
+        template = t.get("every_n_days", "Every {n} days")
+        return template.format(n=value)
 
-    if freq == FrequencyType.CUSTOM_WEEKS:
-        return f"Every {value} weeks"
+    if freq in (FrequencyType.CUSTOM_WEEKS,):
+        template = t.get("every_n_weeks", "Every {n} weeks")
+        return template.format(n=value)
 
-    if freq == FrequencyType.CUSTOM_MONTHS:
-        return f"Every {value} months"
+    if freq in (FrequencyType.CUSTOM_MONTHS,):
+        template = t.get("every_n_months", "Every {n} months")
+        return template.format(n=value)
 
-    return "Unknown"
+    return t.get("unknown", "Unknown")

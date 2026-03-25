@@ -164,5 +164,18 @@
         "name": "Housework"
       }
     }
+  },
+  "frequency": {
+    "once": "Once",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "every_n_days": "Every {n} days",
+    "every_n_weeks": "Every {n} weeks",
+    "every_n_months": "Every {n} months",
+    "every_days": "Every {days}",
+    "day_suffix": " (day {day})",
+    "day_names": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "unknown": "Unknown"
   }
 }

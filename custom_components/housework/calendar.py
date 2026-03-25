@@ -13,7 +13,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 from .coordinator import HouseworkCoordinator
 from .models import Task
-from .scheduling import _advance_one_period
+from .scheduling import advance_one_period
 
 
 async def async_setup_entry(
@@ -108,7 +108,7 @@ class HouseworkCalendar(CoordinatorEntity[HouseworkCoordinator], CalendarEntity)
                 # Advance to next occurrence
                 if task.frequency_type == "once":
                     break
-                current_due = _advance_one_period(current_due, task)
+                current_due = advance_one_period(current_due, task)
                 count += 1
 
         events.sort(key=lambda e: e.start)

@@ -170,7 +170,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             task.current_assignee = determine_next_assignee(task, state)
             await store.async_update_assignment_state(task.id, state)
 
-        await store.async_update_task(task.id, task.to_dict())
+        updates = {
+            "last_completed": task.last_completed,
+            "next_due": task.next_due,
+            "current_assignee": task.current_assignee,
+        }
+        await store.async_update_task(task.id, updates)
         await coordinator.async_request_refresh()
 
         # Fire event
