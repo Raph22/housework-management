@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.service import async_extract_entity_ids
 
 from .assignment import determine_next_assignee, update_assignment_state
 from .const import (
@@ -65,47 +66,35 @@ ADD_TASK_SCHEMA = vol.Schema(
 
 COMPLETE_TASK_SCHEMA = vol.Schema(
     {
-        vol.Required("entity_id"): cv.entity_ids,
         vol.Optional("completed_by"): cv.string,
         vol.Optional("completed_at"): cv.string,
-    }
-)
-
-SKIP_TASK_SCHEMA = vol.Schema(
-    {
-        vol.Required("entity_id"): cv.entity_ids,
-    }
+    },
+    extra=vol.ALLOW_EXTRA,
 )
 
 SNOOZE_TASK_SCHEMA = vol.Schema(
     {
-        vol.Required("entity_id"): cv.entity_ids,
         vol.Required("snooze_until"): cv.string,
-    }
+    },
+    extra=vol.ALLOW_EXTRA,
 )
 
 REASSIGN_TASK_SCHEMA = vol.Schema(
     {
-        vol.Required("entity_id"): cv.entity_ids,
         vol.Required("assignee"): cv.string,
-    }
+    },
+    extra=vol.ALLOW_EXTRA,
 )
 
 UPDATE_TASK_SCHEMA = vol.Schema(
     {
-        vol.Required("entity_id"): cv.entity_ids,
         vol.Optional("title"): cv.string,
         vol.Optional("description"): cv.string,
         vol.Optional("priority"): vol.All(vol.Coerce(int), vol.Range(min=1, max=4)),
         vol.Optional("icon"): cv.string,
         vol.Optional("labels"): vol.All(cv.ensure_list, [cv.string]),
-    }
-)
-
-REMOVE_TASK_SCHEMA = vol.Schema(
-    {
-        vol.Required("entity_id"): cv.entity_ids,
-    }
+    },
+    extra=vol.ALLOW_EXTRA,
 )
 
 ADD_LABEL_SCHEMA = vol.Schema(
@@ -167,17 +156,17 @@ def _get_task_from_entity_id(hass: HomeAssistant, entity_id: str):
     return None, None, None, None
 
 
-def _resolve_entity_ids(call: ServiceCall) -> list[str]:
-    """Resolve entity IDs from a service call."""
-    entity_ids = call.data.get("entity_id", [])
-    if isinstance(entity_ids, str):
-        entity_ids = [entity_ids]
+async def _async_resolve_entity_ids(
+    hass: HomeAssistant, call: ServiceCall
+) -> list[str]:
+    """Resolve entity IDs from a service call, supporting area/device/label targeting."""
+    entity_ids = await async_extract_entity_ids(hass, call)
     if not entity_ids:
         raise ServiceValidationError(
             translation_domain=DOMAIN,
             translation_key="no_target",
         )
-    return entity_ids
+    return list(entity_ids)
 
 
 async def async_setup_services(hass: HomeAssistant) -> None:
@@ -233,7 +222,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
     async def handle_complete_task(call: ServiceCall) -> None:
         """Handle the complete_task service call."""
-        entity_ids = _resolve_entity_ids(call)
+        entity_ids = await _async_resolve_entity_ids(hass, call)
         for entity_id in entity_ids:
             await _complete_single_task(hass, call, entity_id)
 
@@ -295,7 +284,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
     async def handle_skip_task(call: ServiceCall) -> None:
         """Handle the skip_task service call."""
-        entity_ids = _resolve_entity_ids(call)
+        entity_ids = await _async_resolve_entity_ids(hass, call)
         for entity_id in entity_ids:
             await _skip_single_task(hass, entity_id)
 
@@ -326,7 +315,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
     async def handle_snooze_task(call: ServiceCall) -> None:
         """Handle the snooze_task service call."""
-        entity_ids = _resolve_entity_ids(call)
+        entity_ids = await _async_resolve_entity_ids(hass, call)
         snooze_until = call.data["snooze_until"]
         for entity_id in entity_ids:
             await _snooze_single_task(hass, entity_id, snooze_until)
@@ -361,7 +350,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
     async def handle_reassign_task(call: ServiceCall) -> None:
         """Handle the reassign_task service call."""
-        entity_ids = _resolve_entity_ids(call)
+        entity_ids = await _async_resolve_entity_ids(hass, call)
         assignee = call.data["assignee"]
         for entity_id in entity_ids:
             await _reassign_single_task(hass, entity_id, assignee)
@@ -380,7 +369,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
     async def handle_update_task(call: ServiceCall) -> None:
         """Handle the update_task service call."""
-        entity_ids = _resolve_entity_ids(call)
+        entity_ids = await _async_resolve_entity_ids(hass, call)
         for entity_id in entity_ids:
             await _update_single_task(hass, call, entity_id)
 
@@ -414,7 +403,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
     async def handle_remove_task(call: ServiceCall) -> None:
         """Handle the remove_task service call."""
-        entity_ids = _resolve_entity_ids(call)
+        entity_ids = await _async_resolve_entity_ids(hass, call)
         for entity_id in entity_ids:
             await _remove_single_task(hass, entity_id)
 
@@ -484,11 +473,11 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     # Register services
     hass.services.async_register(DOMAIN, SERVICE_ADD_TASK, handle_add_task, ADD_TASK_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_COMPLETE_TASK, handle_complete_task, COMPLETE_TASK_SCHEMA)
-    hass.services.async_register(DOMAIN, SERVICE_SKIP_TASK, handle_skip_task, SKIP_TASK_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_SKIP_TASK, handle_skip_task)
     hass.services.async_register(DOMAIN, SERVICE_SNOOZE_TASK, handle_snooze_task, SNOOZE_TASK_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_REASSIGN_TASK, handle_reassign_task, REASSIGN_TASK_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_UPDATE_TASK, handle_update_task, UPDATE_TASK_SCHEMA)
-    hass.services.async_register(DOMAIN, SERVICE_REMOVE_TASK, handle_remove_task, REMOVE_TASK_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_REMOVE_TASK, handle_remove_task)
     hass.services.async_register(DOMAIN, SERVICE_ADD_LABEL, handle_add_label, ADD_LABEL_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_UPDATE_LABEL, handle_update_label, UPDATE_LABEL_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_REMOVE_LABEL, handle_remove_label, REMOVE_LABEL_SCHEMA)
