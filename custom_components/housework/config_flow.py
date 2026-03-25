@@ -71,7 +71,7 @@ def _task_form_schema(
             ),
             vol.Optional(
                 "frequency_day_of_month",
-                default=d.get("frequency_day_of_month"),
+                description={"suggested_value": d.get("frequency_day_of_month")},
             ): NumberSelector(
                 NumberSelectorConfig(min=1, max=31, mode=NumberSelectorMode.BOX)
             ),
@@ -124,8 +124,11 @@ def _clean_task_data(user_input: dict[str, Any]) -> dict[str, Any]:
         data["priority"] = int(data["priority"])
     if "frequency_value" in data:
         data["frequency_value"] = int(data["frequency_value"])
-    if "frequency_day_of_month" in data and data["frequency_day_of_month"] is not None:
-        data["frequency_day_of_month"] = int(data["frequency_day_of_month"])
+    if "frequency_day_of_month" in data:
+        if data["frequency_day_of_month"] is not None:
+            data["frequency_day_of_month"] = int(data["frequency_day_of_month"])
+        else:
+            del data["frequency_day_of_month"]
     if "frequency_days_of_week" in data:
         data["frequency_days_of_week"] = [
             int(d) for d in data["frequency_days_of_week"]
