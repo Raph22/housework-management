@@ -13,6 +13,7 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -133,6 +134,18 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
         """Return the name of the sensor."""
         task = self._task
         return task.title if task else "Unknown Task"
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        if self._task is None and self.hass:
+            # Task was removed from the store — remove this entity
+            _LOGGER.debug("Task %s removed, cleaning up entity", self._task_id)
+            entity_registry = er.async_get(self.hass)
+            if entity_registry.async_get(self.entity_id):
+                entity_registry.async_remove(self.entity_id)
+            return
+        super()._handle_coordinator_update()
 
     @property
     def available(self) -> bool:

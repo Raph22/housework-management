@@ -317,12 +317,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         title = task.title
         await store.async_remove_task(task.id)
 
-        # Remove the entity from the registry
-        registry = er.async_get(hass)
-        entry = registry.async_get(entity_id)
-        if entry:
-            registry.async_remove(entity_id)
-
+        # Coordinator refresh will trigger entity self-removal via
+        # _handle_coordinator_update detecting the missing task
         await coordinator.async_request_refresh()
         _LOGGER.info("Removed task: %s", title)
 

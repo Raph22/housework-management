@@ -46,6 +46,10 @@ class HouseworkStore:
 
         self._assignment_state = data.get("assignment_state", {})
 
+    async def async_remove(self) -> None:
+        """Remove the storage file."""
+        await self._store.async_remove()
+
     async def _async_save(self) -> None:
         """Save data to storage."""
         data = {
