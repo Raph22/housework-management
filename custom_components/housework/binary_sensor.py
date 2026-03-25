@@ -8,7 +8,6 @@ from datetime import date
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -77,12 +76,6 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
         self._task_id = task.id
         self._attr_unique_id = f"housework_{task.id}"
         self._attr_icon = task.icon
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, "housework_hub")},
-            name="Housework",
-            manufacturer="Housework Integration",
-            model="Task Tracker",
-        )
 
     @property
     def task_id(self) -> str:
