@@ -38,6 +38,7 @@
             "frequency_value": "Every N periods",
             "frequency_days_of_week": "Days of the week",
             "frequency_day_of_month": "Day of the month",
+            "next_due": "First due date",
             "scheduling_mode": "Scheduling mode",
             "priority": "Priority",
             "assignees": "Assignees",
@@ -49,6 +50,7 @@
             "frequency_value": "How many days/weeks/months between occurrences.",
             "frequency_days_of_week": "Only for 'Specific days of week' frequency.",
             "frequency_day_of_month": "Only for 'Monthly' frequency (1-31).",
+            "next_due": "Leave empty to start today. For 'Once' tasks, this is the target date.",
             "scheduling_mode": "Rolling adjusts to completion date. Fixed keeps original cadence."
           }
         },
@@ -60,6 +62,7 @@
             "frequency_value": "Every N periods",
             "frequency_days_of_week": "Days of the week",
             "frequency_day_of_month": "Day of the month",
+            "next_due": "First due date",
             "scheduling_mode": "Scheduling mode",
             "priority": "Priority",
             "assignees": "Assignees",
@@ -71,6 +74,7 @@
             "frequency_value": "How many days/weeks/months between occurrences.",
             "frequency_days_of_week": "Only for 'Specific days of week' frequency.",
             "frequency_day_of_month": "Only for 'Monthly' frequency (1-31).",
+            "next_due": "Leave empty to start today. For 'Once' tasks, this is the target date.",
             "scheduling_mode": "Rolling adjusts to completion date. Fixed keeps original cadence."
           }
         }

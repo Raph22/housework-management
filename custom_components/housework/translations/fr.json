@@ -38,6 +38,7 @@
             "frequency_value": "Tous les N périodes",
             "frequency_days_of_week": "Jours de la semaine",
             "frequency_day_of_month": "Jour du mois",
+            "next_due": "Première échéance",
             "scheduling_mode": "Mode de planification",
             "priority": "Priorité",
             "assignees": "Responsables",
@@ -49,6 +50,7 @@
             "frequency_value": "Nombre de jours/semaines/mois entre chaque occurrence.",
             "frequency_days_of_week": "Uniquement pour la fréquence 'Jours spécifiques'.",
             "frequency_day_of_month": "Uniquement pour la fréquence 'Mensuel' (1-31).",
+            "next_due": "Laisser vide pour commencer aujourd'hui. Pour les tâches 'Une fois', c'est la date cible.",
             "scheduling_mode": "Glissant s'adapte à la date de réalisation. Fixe conserve la cadence d'origine."
           }
         },
@@ -60,6 +62,7 @@
             "frequency_value": "Tous les N périodes",
             "frequency_days_of_week": "Jours de la semaine",
             "frequency_day_of_month": "Jour du mois",
+            "next_due": "Première échéance",
             "scheduling_mode": "Mode de planification",
             "priority": "Priorité",
             "assignees": "Responsables",
@@ -71,6 +74,7 @@
             "frequency_value": "Nombre de jours/semaines/mois entre chaque occurrence.",
             "frequency_days_of_week": "Uniquement pour la fréquence 'Jours spécifiques'.",
             "frequency_day_of_month": "Uniquement pour la fréquence 'Mensuel' (1-31).",
+            "next_due": "Laisser vide pour commencer aujourd'hui. Pour les tâches 'Une fois', c'est la date cible.",
             "scheduling_mode": "Glissant s'adapte à la date de réalisation. Fixe conserve la cadence d'origine."
           }
         }

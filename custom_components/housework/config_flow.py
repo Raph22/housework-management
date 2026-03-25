@@ -16,6 +16,7 @@ from homeassistant.config_entries import (
 )
 from homeassistant.core import callback
 from homeassistant.helpers.selector import (
+    DateSelector,
     EntitySelector,
     EntitySelectorConfig,
     IconSelector,
@@ -75,6 +76,10 @@ def _task_form_schema(
             ): NumberSelector(
                 NumberSelectorConfig(min=1, max=31, mode=NumberSelectorMode.BOX)
             ),
+            vol.Optional(
+                "next_due",
+                description={"suggested_value": d.get("next_due")},
+            ): DateSelector(),
             vol.Optional(
                 "scheduling_mode", default=d.get("scheduling_mode", "rolling")
             ): SelectSelector(

@@ -71,9 +71,13 @@ class HouseworkCoordinator(DataUpdateCoordinator[dict[str, Task]]):
             # Initialize runtime state for new subentries (added via UI)
             if not runtime.get("next_due"):
                 task = Task.from_subentry(sid, data)
-                initial_due = calculate_initial_due(task)
+                # Use explicit next_due from subentry data if provided
+                if data.get("next_due"):
+                    initial_due_str = data["next_due"]
+                else:
+                    initial_due_str = calculate_initial_due(task).isoformat()
                 runtime_updates = {
-                    "next_due": initial_due.isoformat(),
+                    "next_due": initial_due_str,
                     "created_at": task.created_at,
                     "scheduling_signature": _scheduling_signature(data),
                 }

@@ -43,9 +43,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: HouseworkConfigEntry) ->
         if not state.get("next_due"):
             data = dict(subentry.data)
             task = Task.from_subentry(subentry.subentry_id, data)
-            initial_due = calculate_initial_due(task)
+            if data.get("next_due"):
+                initial_due_str = data["next_due"]
+            else:
+                initial_due_str = calculate_initial_due(task).isoformat()
             updates = {
-                "next_due": initial_due.isoformat(),
+                "next_due": initial_due_str,
                 "created_at": state.get("created_at", task.created_at),
             }
             if task.assignees and not state.get("current_assignee"):
