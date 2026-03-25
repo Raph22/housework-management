@@ -21,6 +21,24 @@
       }
     }
   },
+  "selector": {
+    "assignment_strategy": {
+      "options": {
+        "round_robin": "Round robin",
+        "least_completed": "Least completed",
+        "random": "Random",
+        "fixed": "Fixed"
+      }
+    },
+    "priority": {
+      "options": {
+        "1": "P1 - Urgent",
+        "2": "P2 - High",
+        "3": "P3 - Normal",
+        "4": "P4 - Low"
+      }
+    }
+  },
   "services": {
     "add_task": {
       "name": "Add task",

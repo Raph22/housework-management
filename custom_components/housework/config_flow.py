@@ -9,6 +9,7 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig
 
 from .const import (
     ASSIGNMENT_STRATEGIES,
@@ -27,7 +28,6 @@ class HouseworkConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the initial step."""
-        # Single instance only
         await self.async_set_unique_id(DOMAIN)
         self._abort_if_unique_id_configured()
 
@@ -58,7 +58,11 @@ class HouseworkOptionsFlow(OptionsFlow):
     ) -> FlowResult:
         """Manage the options."""
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            # Convert priority back to int for storage
+            data = dict(user_input)
+            if "default_priority" in data:
+                data["default_priority"] = int(data["default_priority"])
+            return self.async_create_entry(title="", data=data)
 
         return self.async_show_form(
             step_id="init",
@@ -70,14 +74,24 @@ class HouseworkOptionsFlow(OptionsFlow):
                             "default_assignment_strategy",
                             DEFAULT_ASSIGNMENT_STRATEGY,
                         ),
-                    ): vol.In(ASSIGNMENT_STRATEGIES),
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=ASSIGNMENT_STRATEGIES,
+                            translation_key="assignment_strategy",
+                        )
+                    ),
                     vol.Optional(
                         "default_priority",
-                        default=self._config_entry.options.get(
+                        default=str(self._config_entry.options.get(
                             "default_priority",
                             DEFAULT_PRIORITY,
-                        ),
-                    ): vol.In({1: "P1 - Urgent", 2: "P2 - High", 3: "P3 - Normal", 4: "P4 - Low"}),
+                        )),
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=["1", "2", "3", "4"],
+                            translation_key="priority",
+                        )
+                    ),
                 }
             ),
         )
