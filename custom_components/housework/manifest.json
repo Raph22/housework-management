@@ -1,12 +1,14 @@
 {
   "domain": "housework",
   "name": "Housework",
-  "codeowners": [],
+  "codeowners": ["@Raph22"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "",
-  "iot_class": "local_push",
-  "issue_tracker": "",
+  "documentation": "https://github.com/Raph22/housework-management",
+  "integration_type": "helper",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/Raph22/housework-management/issues",
   "requirements": [],
+  "single_config_entry": true,
   "version": "0.2.0"
 }
