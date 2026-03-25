@@ -20,7 +20,7 @@ from .const import (
     CompletionAction,
     FrequencyType,
 )
-from .models import CompletionRecord, Task
+from .models import CompletionRecord, Label, Task
 from .scheduling import calculate_initial_due, calculate_next_due
 
 _LOGGER = logging.getLogger(__name__)
@@ -32,6 +32,9 @@ SERVICE_SNOOZE_TASK = "snooze_task"
 SERVICE_REASSIGN_TASK = "reassign_task"
 SERVICE_UPDATE_TASK = "update_task"
 SERVICE_REMOVE_TASK = "remove_task"
+SERVICE_ADD_LABEL = "add_label"
+SERVICE_UPDATE_LABEL = "update_label"
+SERVICE_REMOVE_LABEL = "remove_label"
 
 ADD_TASK_SCHEMA = vol.Schema(
     {
@@ -51,6 +54,29 @@ ADD_TASK_SCHEMA = vol.Schema(
         ),
         vol.Optional("icon", default="mdi:broom"): cv.string,
         vol.Optional("next_due"): cv.string,
+    }
+)
+
+ADD_LABEL_SCHEMA = vol.Schema(
+    {
+        vol.Required("name"): cv.string,
+        vol.Optional("color", default=""): cv.string,
+        vol.Optional("icon", default=""): cv.string,
+    }
+)
+
+UPDATE_LABEL_SCHEMA = vol.Schema(
+    {
+        vol.Required("label_id"): cv.string,
+        vol.Optional("name"): cv.string,
+        vol.Optional("color"): cv.string,
+        vol.Optional("icon"): cv.string,
+    }
+)
+
+REMOVE_LABEL_SCHEMA = vol.Schema(
+    {
+        vol.Required("label_id"): cv.string,
     }
 )
 
@@ -221,6 +247,16 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         await store.async_update_task(task.id, {"next_due": task.next_due})
         await coordinator.async_request_refresh()
+
+        hass.bus.async_fire(
+            "housework_task_skipped",
+            {
+                "task_id": task.id,
+                "title": task.title,
+                "next_due": task.next_due,
+            },
+        )
+
         _LOGGER.info("Skipped task: %s", task.title)
 
     async def handle_snooze_task(call: ServiceCall) -> None:
@@ -254,6 +290,16 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         task.next_due = snooze_until
         await store.async_update_task(task.id, {"next_due": task.next_due})
         await coordinator.async_request_refresh()
+
+        hass.bus.async_fire(
+            "housework_task_snoozed",
+            {
+                "task_id": task.id,
+                "title": task.title,
+                "snooze_until": snooze_until,
+            },
+        )
+
         _LOGGER.info("Snoozed task: %s until %s", task.title, snooze_until)
 
     async def handle_reassign_task(call: ServiceCall) -> None:
@@ -322,6 +368,55 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         await coordinator.async_request_refresh()
         _LOGGER.info("Removed task: %s", title)
 
+    async def handle_add_label(call: ServiceCall) -> None:
+        """Handle the add_label service call."""
+        store, coordinator = _get_store_and_coordinator(hass)
+        if store is None:
+            _LOGGER.error("Housework store not found")
+            return
+
+        label = Label(
+            name=call.data["name"],
+            color=call.data.get("color", ""),
+            icon=call.data.get("icon", ""),
+        )
+        await store.async_add_label(label)
+        _LOGGER.info("Added label: %s", label.name)
+
+    async def handle_update_label(call: ServiceCall) -> None:
+        """Handle the update_label service call."""
+        store, coordinator = _get_store_and_coordinator(hass)
+        if store is None:
+            _LOGGER.error("Housework store not found")
+            return
+
+        label_id = call.data["label_id"]
+        updates = {}
+        for key in ("name", "color", "icon"):
+            if key in call.data:
+                updates[key] = call.data[key]
+
+        if updates:
+            result = await store.async_update_label(label_id, updates)
+            if result is None:
+                _LOGGER.error("Label not found: %s", label_id)
+            else:
+                _LOGGER.info("Updated label: %s", result.name)
+
+    async def handle_remove_label(call: ServiceCall) -> None:
+        """Handle the remove_label service call."""
+        store, coordinator = _get_store_and_coordinator(hass)
+        if store is None:
+            _LOGGER.error("Housework store not found")
+            return
+
+        label_id = call.data["label_id"]
+        removed = await store.async_remove_label(label_id)
+        if not removed:
+            _LOGGER.error("Label not found: %s", label_id)
+        else:
+            _LOGGER.info("Removed label: %s", label_id)
+
     # Register services
     hass.services.async_register(DOMAIN, SERVICE_ADD_TASK, handle_add_task, ADD_TASK_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_COMPLETE_TASK, handle_complete_task)
@@ -330,6 +425,9 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     hass.services.async_register(DOMAIN, SERVICE_REASSIGN_TASK, handle_reassign_task)
     hass.services.async_register(DOMAIN, SERVICE_UPDATE_TASK, handle_update_task)
     hass.services.async_register(DOMAIN, SERVICE_REMOVE_TASK, handle_remove_task)
+    hass.services.async_register(DOMAIN, SERVICE_ADD_LABEL, handle_add_label, ADD_LABEL_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_UPDATE_LABEL, handle_update_label, UPDATE_LABEL_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_REMOVE_LABEL, handle_remove_label, REMOVE_LABEL_SCHEMA)
 
 
 async def async_unload_services(hass: HomeAssistant) -> None:
@@ -342,6 +440,9 @@ async def async_unload_services(hass: HomeAssistant) -> None:
         SERVICE_REASSIGN_TASK,
         SERVICE_UPDATE_TASK,
         SERVICE_REMOVE_TASK,
+        SERVICE_ADD_LABEL,
+        SERVICE_UPDATE_LABEL,
+        SERVICE_REMOVE_LABEL,
     ):
         hass.services.async_remove(DOMAIN, service)
 

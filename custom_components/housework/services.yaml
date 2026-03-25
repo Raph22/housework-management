@@ -177,3 +177,44 @@ remove_task:
     entity:
       integration: housework
       domain: binary_sensor
+
+add_label:
+  fields:
+    name:
+      required: true
+      selector:
+        text:
+    color:
+      required: false
+      selector:
+        text:
+    icon:
+      required: false
+      selector:
+        icon:
+
+update_label:
+  fields:
+    label_id:
+      required: true
+      selector:
+        text:
+    name:
+      required: false
+      selector:
+        text:
+    color:
+      required: false
+      selector:
+        text:
+    icon:
+      required: false
+      selector:
+        icon:
+
+remove_label:
+  fields:
+    label_id:
+      required: true
+      selector:
+        text:

@@ -143,6 +143,56 @@
     "remove_task": {
       "name": "Supprimer une tâche",
       "description": "Supprimer une tâche ménagère."
+    },
+    "add_label": {
+      "name": "Ajouter un label",
+      "description": "Créer un nouveau label pour catégoriser les tâches.",
+      "fields": {
+        "name": {
+          "name": "Nom",
+          "description": "Nom du label."
+        },
+        "color": {
+          "name": "Couleur",
+          "description": "Couleur hexadécimale du label (ex. #FF5733)."
+        },
+        "icon": {
+          "name": "Icône",
+          "description": "Icône MDI pour le label."
+        }
+      }
+    },
+    "update_label": {
+      "name": "Modifier un label",
+      "description": "Modifier les propriétés d'un label existant.",
+      "fields": {
+        "label_id": {
+          "name": "ID du label",
+          "description": "Identifiant du label à modifier."
+        },
+        "name": {
+          "name": "Nom",
+          "description": "Nouveau nom du label."
+        },
+        "color": {
+          "name": "Couleur",
+          "description": "Nouvelle couleur du label."
+        },
+        "icon": {
+          "name": "Icône",
+          "description": "Nouvelle icône du label."
+        }
+      }
+    },
+    "remove_label": {
+      "name": "Supprimer un label",
+      "description": "Supprimer un label.",
+      "fields": {
+        "label_id": {
+          "name": "ID du label",
+          "description": "Identifiant du label à supprimer."
+        }
+      }
     }
   },
   "entity": {

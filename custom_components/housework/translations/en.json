@@ -143,6 +143,56 @@
     "remove_task": {
       "name": "Remove task",
       "description": "Delete a housework task."
+    },
+    "add_label": {
+      "name": "Add label",
+      "description": "Create a new label for categorizing tasks.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "Name of the label."
+        },
+        "color": {
+          "name": "Color",
+          "description": "Hex color for the label (e.g. #FF5733)."
+        },
+        "icon": {
+          "name": "Icon",
+          "description": "MDI icon for the label."
+        }
+      }
+    },
+    "update_label": {
+      "name": "Update label",
+      "description": "Update properties of an existing label.",
+      "fields": {
+        "label_id": {
+          "name": "Label ID",
+          "description": "ID of the label to update."
+        },
+        "name": {
+          "name": "Name",
+          "description": "New name for the label."
+        },
+        "color": {
+          "name": "Color",
+          "description": "New color for the label."
+        },
+        "icon": {
+          "name": "Icon",
+          "description": "New icon for the label."
+        }
+      }
+    },
+    "remove_label": {
+      "name": "Remove label",
+      "description": "Delete a label.",
+      "fields": {
+        "label_id": {
+          "name": "Label ID",
+          "description": "ID of the label to delete."
+        }
+      }
     }
   },
   "entity": {
