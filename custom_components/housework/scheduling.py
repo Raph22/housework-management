@@ -139,10 +139,14 @@ def advance_one_period(base: date, task: Task) -> date:
 
     if freq == FrequencyType.DAY_OF_WEEK:
         if task.frequency_days_of_week:
-            return _next_matching_weekday(
+            next_day = _next_matching_weekday(
                 base + timedelta(days=1),
                 task.frequency_days_of_week,
             )
+            # frequency_value > 1 means "every Nth week" (e.g., 2 = every other week)
+            if value > 1:
+                next_day += timedelta(weeks=value - 1)
+            return next_day
         return base + timedelta(days=1)
 
     # Fallback (once or unknown)

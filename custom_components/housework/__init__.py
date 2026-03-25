@@ -19,6 +19,15 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = ["binary_sensor", "calendar", "sensor"]
 
+# Fields that affect scheduling — changes to these require next_due recalculation
+_SCHEDULING_FIELDS = frozenset({
+    "frequency_type",
+    "frequency_value",
+    "frequency_days_of_week",
+    "frequency_day_of_month",
+    "scheduling_mode",
+})
+
 type HouseworkConfigEntry = ConfigEntry[HouseworkRuntimeData]
 
 
@@ -90,6 +99,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: HouseworkConfigEntry) ->
     return True
 
 
+def _extract_scheduling_signature(data: dict) -> dict:
+    """Extract scheduling-relevant fields from subentry data for comparison."""
+    return {k: data.get(k) for k in _SCHEDULING_FIELDS}
+
+
 async def _ensure_runtime_state(
     store: HouseworkStore, subentry: ConfigSubentry
 ) -> None:
@@ -98,11 +112,13 @@ async def _ensure_runtime_state(
     if state.get("next_due"):
         return
 
-    task = Task.from_subentry(subentry.subentry_id, dict(subentry.data))
+    data = dict(subentry.data)
+    task = Task.from_subentry(subentry.subentry_id, data)
     initial_due = calculate_initial_due(task)
     updates = {
         "next_due": initial_due.isoformat(),
         "created_at": state.get("created_at", task.created_at),
+        "scheduling_signature": _extract_scheduling_signature(data),
     }
     if task.assignees and not state.get("current_assignee"):
         updates["current_assignee"] = task.assignees[0]
@@ -112,21 +128,35 @@ async def _ensure_runtime_state(
 async def _reconcile_runtime_after_edit(
     store: HouseworkStore, subentry: ConfigSubentry
 ) -> None:
-    """Reconcile runtime state after a subentry is reconfigured."""
+    """Reconcile runtime state after a subentry is reconfigured.
+
+    Only recalculates next_due when scheduling-relevant fields changed.
+    For non-scheduling edits (title, icon, description), next_due is untouched.
+    """
     state = store.get_runtime_state(subentry.subentry_id)
     data = dict(subentry.data)
     updates = {}
 
-    task = Task.from_subentry(subentry.subentry_id, data, state)
+    # Check if scheduling fields changed
+    old_sig = state.get("scheduling_signature", {})
+    new_sig = _extract_scheduling_signature(data)
+    scheduling_changed = old_sig != new_sig
 
-    # Recalculate next_due based on new frequency settings
-    if task.last_completed:
-        new_next_due = calculate_next_due(task)
-        if new_next_due:
-            updates["next_due"] = new_next_due.isoformat()
-    elif not state.get("next_due"):
-        initial_due = calculate_initial_due(task)
-        updates["next_due"] = initial_due.isoformat()
+    if scheduling_changed:
+        task = Task.from_subentry(subentry.subentry_id, data, state)
+
+        if task.last_completed:
+            # Has been completed before — recalculate from last completion
+            new_next_due = calculate_next_due(task)
+            if new_next_due:
+                updates["next_due"] = new_next_due.isoformat()
+        else:
+            # Never completed — recalculate initial due with new settings
+            new_task = Task.from_subentry(subentry.subentry_id, data)
+            initial_due = calculate_initial_due(new_task)
+            updates["next_due"] = initial_due.isoformat()
+
+        updates["scheduling_signature"] = new_sig
 
     # Reconcile assignee
     new_assignees = data.get("assignees", [])
