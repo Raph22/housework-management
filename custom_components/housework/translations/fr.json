@@ -1,0 +1,168 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configurer les tâches ménagères",
+        "description": "Ceci va configurer l'intégration pour la gestion des tâches ménagères."
+      }
+    },
+    "abort": {
+      "already_configured": "Les tâches ménagères sont déjà configurées."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options des tâches ménagères",
+        "data": {
+          "default_assignment_strategy": "Stratégie d'attribution par défaut",
+          "default_priority": "Priorité par défaut"
+        }
+      }
+    }
+  },
+  "services": {
+    "add_task": {
+      "name": "Ajouter une tâche",
+      "description": "Créer une nouvelle tâche ménagère.",
+      "fields": {
+        "title": {
+          "name": "Titre",
+          "description": "Nom de la tâche."
+        },
+        "frequency_type": {
+          "name": "Type de fréquence",
+          "description": "À quelle fréquence la tâche se répète."
+        },
+        "frequency_value": {
+          "name": "Valeur de fréquence",
+          "description": "Intervalle de répétition (ex. : tous les N jours/semaines/mois). Par défaut : 1."
+        },
+        "frequency_days_of_week": {
+          "name": "Jours de la semaine",
+          "description": "Jours de la semaine (0=Lun, 6=Dim). Uniquement pour le type 'jours de la semaine'."
+        },
+        "frequency_day_of_month": {
+          "name": "Jour du mois",
+          "description": "Jour du mois (1-31). Uniquement pour le type 'mensuel'."
+        },
+        "scheduling_mode": {
+          "name": "Mode de planification",
+          "description": "'Glissant' calcule depuis la dernière réalisation, 'Fixe' conserve la cadence d'origine."
+        },
+        "priority": {
+          "name": "Priorité",
+          "description": "Niveau de priorité (1=urgent, 4=basse). Par défaut : 3."
+        },
+        "description": {
+          "name": "Description",
+          "description": "Détails optionnels sur la tâche."
+        },
+        "assignees": {
+          "name": "Responsables",
+          "description": "Personnes à qui attribuer cette tâche."
+        },
+        "assignment_strategy": {
+          "name": "Stratégie d'attribution",
+          "description": "Comment alterner les responsables."
+        },
+        "icon": {
+          "name": "Icône",
+          "description": "Icône MDI pour la tâche."
+        },
+        "next_due": {
+          "name": "Première échéance",
+          "description": "Date de la première échéance. Par défaut : aujourd'hui."
+        }
+      }
+    },
+    "complete_task": {
+      "name": "Terminer une tâche",
+      "description": "Marquer une tâche ménagère comme terminée.",
+      "fields": {
+        "completed_by": {
+          "name": "Terminée par",
+          "description": "Personne ayant terminé la tâche. Par défaut : le responsable actuel."
+        },
+        "completed_at": {
+          "name": "Terminée le",
+          "description": "Date et heure de réalisation. Par défaut : maintenant."
+        }
+      }
+    },
+    "skip_task": {
+      "name": "Passer une tâche",
+      "description": "Passer l'occurrence actuelle d'une tâche sans la réaliser."
+    },
+    "snooze_task": {
+      "name": "Reporter une tâche",
+      "description": "Reporter une tâche à une date ultérieure.",
+      "fields": {
+        "snooze_until": {
+          "name": "Reporter jusqu'au",
+          "description": "Date à laquelle reporter la tâche."
+        }
+      }
+    },
+    "reassign_task": {
+      "name": "Réattribuer une tâche",
+      "description": "Changer le responsable actuel d'une tâche.",
+      "fields": {
+        "assignee": {
+          "name": "Attribuer à",
+          "description": "Personne à qui attribuer la tâche."
+        }
+      }
+    },
+    "update_task": {
+      "name": "Modifier une tâche",
+      "description": "Modifier les propriétés d'une tâche existante.",
+      "fields": {
+        "title": {
+          "name": "Titre",
+          "description": "Nouveau nom de la tâche."
+        },
+        "description": {
+          "name": "Description",
+          "description": "Nouvelle description de la tâche."
+        },
+        "priority": {
+          "name": "Priorité",
+          "description": "Nouveau niveau de priorité."
+        },
+        "icon": {
+          "name": "Icône",
+          "description": "Nouvelle icône pour la tâche."
+        },
+        "enabled": {
+          "name": "Activée",
+          "description": "Activer ou désactiver la tâche."
+        }
+      }
+    },
+    "remove_task": {
+      "name": "Supprimer une tâche",
+      "description": "Supprimer une tâche ménagère."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "housework_task": {
+        "name": "Tâche ménagère"
+      }
+    },
+    "sensor": {
+      "tasks_due_today": {
+        "name": "Tâches du jour"
+      },
+      "overdue_tasks": {
+        "name": "Tâches en retard"
+      }
+    },
+    "calendar": {
+      "housework": {
+        "name": "Tâches ménagères"
+      }
+    }
+  }
+}

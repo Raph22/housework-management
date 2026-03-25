@@ -1,0 +1,11 @@
+{
+  "domain": "housework",
+  "name": "Housework",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "",
+  "iot_class": "local_polling",
+  "issue_tracker": "",
+  "version": "0.1.0"
+}

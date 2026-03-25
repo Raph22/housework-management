@@ -1,0 +1,168 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Housework",
+        "description": "This will set up the Housework integration for managing household chores."
+      }
+    },
+    "abort": {
+      "already_configured": "Housework is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Housework Options",
+        "data": {
+          "default_assignment_strategy": "Default assignment strategy",
+          "default_priority": "Default priority"
+        }
+      }
+    }
+  },
+  "services": {
+    "add_task": {
+      "name": "Add task",
+      "description": "Create a new housework task.",
+      "fields": {
+        "title": {
+          "name": "Title",
+          "description": "Name of the task."
+        },
+        "frequency_type": {
+          "name": "Frequency type",
+          "description": "How often the task repeats."
+        },
+        "frequency_value": {
+          "name": "Frequency value",
+          "description": "Repeat interval (e.g., every N days/weeks/months). Default: 1."
+        },
+        "frequency_days_of_week": {
+          "name": "Days of week",
+          "description": "Days of the week (0=Mon, 6=Sun). Only for 'day_of_week' type."
+        },
+        "frequency_day_of_month": {
+          "name": "Day of month",
+          "description": "Day of the month (1-31). Only for 'monthly' type."
+        },
+        "scheduling_mode": {
+          "name": "Scheduling mode",
+          "description": "'Rolling' calculates from last completion, 'Fixed' keeps original cadence."
+        },
+        "priority": {
+          "name": "Priority",
+          "description": "Priority level (1=urgent, 4=low). Default: 3."
+        },
+        "description": {
+          "name": "Description",
+          "description": "Optional details about the task."
+        },
+        "assignees": {
+          "name": "Assignees",
+          "description": "Person entities to assign this task to."
+        },
+        "assignment_strategy": {
+          "name": "Assignment strategy",
+          "description": "How to rotate assignees."
+        },
+        "icon": {
+          "name": "Icon",
+          "description": "MDI icon for the task."
+        },
+        "next_due": {
+          "name": "First due date",
+          "description": "When the task is first due. Defaults to today."
+        }
+      }
+    },
+    "complete_task": {
+      "name": "Complete task",
+      "description": "Mark a housework task as completed.",
+      "fields": {
+        "completed_by": {
+          "name": "Completed by",
+          "description": "Person who completed the task. Defaults to current assignee."
+        },
+        "completed_at": {
+          "name": "Completed at",
+          "description": "When the task was completed. Defaults to now."
+        }
+      }
+    },
+    "skip_task": {
+      "name": "Skip task",
+      "description": "Skip the current occurrence of a task without completing it."
+    },
+    "snooze_task": {
+      "name": "Snooze task",
+      "description": "Postpone a task to a specific date.",
+      "fields": {
+        "snooze_until": {
+          "name": "Snooze until",
+          "description": "Date to postpone the task to."
+        }
+      }
+    },
+    "reassign_task": {
+      "name": "Reassign task",
+      "description": "Change the current assignee of a task.",
+      "fields": {
+        "assignee": {
+          "name": "Assign to",
+          "description": "Person to assign the task to."
+        }
+      }
+    },
+    "update_task": {
+      "name": "Update task",
+      "description": "Update properties of an existing task.",
+      "fields": {
+        "title": {
+          "name": "Title",
+          "description": "New name for the task."
+        },
+        "description": {
+          "name": "Description",
+          "description": "New description for the task."
+        },
+        "priority": {
+          "name": "Priority",
+          "description": "New priority level."
+        },
+        "icon": {
+          "name": "Icon",
+          "description": "New icon for the task."
+        },
+        "enabled": {
+          "name": "Enabled",
+          "description": "Enable or disable the task."
+        }
+      }
+    },
+    "remove_task": {
+      "name": "Remove task",
+      "description": "Delete a housework task."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "housework_task": {
+        "name": "Housework task"
+      }
+    },
+    "sensor": {
+      "tasks_due_today": {
+        "name": "Tasks due today"
+      },
+      "overdue_tasks": {
+        "name": "Overdue tasks"
+      }
+    },
+    "calendar": {
+      "housework": {
+        "name": "Housework"
+      }
+    }
+  }
+}

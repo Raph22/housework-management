@@ -1,0 +1,5 @@
+{
+  "name": "Housework",
+  "render_readme": true,
+  "domains": ["binary_sensor", "calendar", "sensor"]
+}
