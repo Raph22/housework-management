@@ -22,7 +22,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     store = HouseworkStore(hass)
     await store.async_load()
 
-    coordinator = HouseworkCoordinator(hass, store)
+    coordinator = HouseworkCoordinator(hass, store, entry)
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})
@@ -61,5 +61,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Clean up storage when the integration is removed."""
-    store = HouseworkStore(hass)
-    await store.async_remove()
+    # Use existing store if still loaded, otherwise create a temporary one
+    entry_data = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if entry_data and "store" in entry_data:
+        await entry_data["store"].async_remove()
+    else:
+        store = HouseworkStore(hass)
+        await store.async_remove()

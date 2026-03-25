@@ -8,6 +8,7 @@ import logging
 import voluptuous as vol
 
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 import homeassistant.helpers.config_validation as cv
 
@@ -44,9 +45,13 @@ ADD_TASK_SCHEMA = vol.Schema(
         vol.Optional("frequency_days_of_week"): vol.All(
             cv.ensure_list, [vol.Coerce(int)]
         ),
-        vol.Optional("frequency_day_of_month"): vol.Coerce(int),
+        vol.Optional("frequency_day_of_month"): vol.All(
+            vol.Coerce(int), vol.Range(min=1, max=31)
+        ),
         vol.Optional("scheduling_mode", default="rolling"): vol.In(SCHEDULING_MODES),
-        vol.Optional("priority", default=3): vol.Coerce(int),
+        vol.Optional("priority", default=3): vol.All(
+            vol.Coerce(int), vol.Range(min=1, max=4)
+        ),
         vol.Optional("description", default=""): cv.string,
         vol.Optional("assignees"): vol.All(cv.ensure_list, [cv.string]),
         vol.Optional("assignment_strategy", default="round_robin"): vol.In(
@@ -54,6 +59,51 @@ ADD_TASK_SCHEMA = vol.Schema(
         ),
         vol.Optional("icon", default="mdi:broom"): cv.string,
         vol.Optional("next_due"): cv.string,
+    }
+)
+
+COMPLETE_TASK_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_ids,
+        vol.Optional("completed_by"): cv.string,
+        vol.Optional("completed_at"): cv.string,
+    }
+)
+
+SKIP_TASK_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_ids,
+    }
+)
+
+SNOOZE_TASK_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_ids,
+        vol.Required("snooze_until"): cv.string,
+    }
+)
+
+REASSIGN_TASK_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_ids,
+        vol.Required("assignee"): cv.string,
+    }
+)
+
+UPDATE_TASK_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_ids,
+        vol.Optional("title"): cv.string,
+        vol.Optional("description"): cv.string,
+        vol.Optional("priority"): vol.All(vol.Coerce(int), vol.Range(min=1, max=4)),
+        vol.Optional("icon"): cv.string,
+        vol.Optional("enabled"): cv.boolean,
+    }
+)
+
+REMOVE_TASK_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_ids,
     }
 )
 
@@ -89,6 +139,17 @@ def _get_store_and_coordinator(hass: HomeAssistant):
     return None, None
 
 
+def _get_entry_options(hass: HomeAssistant) -> dict:
+    """Get the config entry options."""
+    for entry_id, entry_data in hass.data.get(DOMAIN, {}).items():
+        if "store" in entry_data:
+            entries = hass.config_entries.async_entries(DOMAIN)
+            for entry in entries:
+                if entry.entry_id == entry_id:
+                    return dict(entry.options)
+    return {}
+
+
 def _get_task_from_entity_id(hass: HomeAssistant, entity_id: str):
     """Resolve an entity_id to a task via the entity registry."""
     store, coordinator = _get_store_and_coordinator(hass)
@@ -104,9 +165,21 @@ def _get_task_from_entity_id(hass: HomeAssistant, entity_id: str):
     return task, store, coordinator
 
 
+def _resolve_entity_ids(call: ServiceCall) -> list[str]:
+    """Resolve entity IDs from a service call."""
+    entity_ids = call.data.get("entity_id", [])
+    if isinstance(entity_ids, str):
+        entity_ids = [entity_ids]
+    if not entity_ids:
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_target",
+        )
+    return entity_ids
+
+
 async def async_setup_services(hass: HomeAssistant) -> None:
     """Set up Housework services."""
-    # Guard against re-registration on reload
     if hass.services.has_service(DOMAIN, SERVICE_ADD_TASK):
         return
 
@@ -118,29 +191,31 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             return
 
         data = call.data
+        options = _get_entry_options(hass)
 
         task = Task(
             title=data["title"],
             description=data.get("description", ""),
-            priority=data.get("priority", 3),
+            priority=data.get("priority", options.get("default_priority", 3)),
             frequency_type=data["frequency_type"],
             frequency_value=data.get("frequency_value", 1),
             frequency_days_of_week=data.get("frequency_days_of_week", []),
             frequency_day_of_month=data.get("frequency_day_of_month"),
             scheduling_mode=data.get("scheduling_mode", "rolling"),
             assignees=data.get("assignees", []),
-            assignment_strategy=data.get("assignment_strategy", "round_robin"),
+            assignment_strategy=data.get(
+                "assignment_strategy",
+                options.get("default_assignment_strategy", "round_robin"),
+            ),
             icon=data.get("icon", "mdi:broom"),
         )
 
-        # Set initial due date
         if data.get("next_due"):
             task.next_due = data["next_due"]
         else:
             initial_due = calculate_initial_due(task)
             task.next_due = initial_due.isoformat()
 
-        # Set initial assignee
         if task.assignees:
             task.current_assignee = task.assignees[0]
 
@@ -172,7 +247,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         else:
             completed_at_str = datetime.now(timezone.utc).isoformat()
 
-        # Record history
         record = CompletionRecord(
             task_id=task.id,
             completed_by=completed_by,
@@ -181,13 +255,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         )
         await store.async_add_history(record)
 
-        # Build updates dict — don't mutate task directly
         updates: dict = {"last_completed": completed_at_str}
 
-        # Calculate next due
-        task.last_completed = completed_at_str  # needed for calculate_next_due
+        # Calculate next due using override (don't mutate task)
         if task.frequency_type != FrequencyType.ONCE:
-            next_due = calculate_next_due(task)
+            next_due = calculate_next_due(
+                task, last_completed_override=completed_at_str
+            )
             updates["next_due"] = next_due.isoformat() if next_due else None
         else:
             updates["next_due"] = None
@@ -230,7 +304,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             _LOGGER.error("Task not found for entity: %s", entity_id)
             return
 
-        # Record history
         record = CompletionRecord(
             task_id=task.id,
             completed_at=datetime.now(timezone.utc).isoformat(),
@@ -238,7 +311,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         )
         await store.async_add_history(record)
 
-        # Advance from current next_due (not from last_completed)
         next_due = calculate_next_due_after_skip(task)
         next_due_str = next_due.isoformat() if next_due else None
 
@@ -274,7 +346,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         if isinstance(snooze_until, date):
             snooze_until = snooze_until.isoformat()
 
-        # Record history
         record = CompletionRecord(
             task_id=task.id,
             completed_at=datetime.now(timezone.utc).isoformat(),
@@ -331,11 +402,9 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             return
 
         updates = {}
-        for key in ("title", "description", "icon", "enabled"):
+        for key in ("title", "description", "icon", "enabled", "priority"):
             if key in call.data:
                 updates[key] = call.data[key]
-        if "priority" in call.data:
-            updates["priority"] = int(call.data["priority"])
 
         if updates:
             await store.async_update_task(task.id, updates)
@@ -410,12 +479,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
     # Register services
     hass.services.async_register(DOMAIN, SERVICE_ADD_TASK, handle_add_task, ADD_TASK_SCHEMA)
-    hass.services.async_register(DOMAIN, SERVICE_COMPLETE_TASK, handle_complete_task)
-    hass.services.async_register(DOMAIN, SERVICE_SKIP_TASK, handle_skip_task)
-    hass.services.async_register(DOMAIN, SERVICE_SNOOZE_TASK, handle_snooze_task)
-    hass.services.async_register(DOMAIN, SERVICE_REASSIGN_TASK, handle_reassign_task)
-    hass.services.async_register(DOMAIN, SERVICE_UPDATE_TASK, handle_update_task)
-    hass.services.async_register(DOMAIN, SERVICE_REMOVE_TASK, handle_remove_task)
+    hass.services.async_register(DOMAIN, SERVICE_COMPLETE_TASK, handle_complete_task, COMPLETE_TASK_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_SKIP_TASK, handle_skip_task, SKIP_TASK_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_SNOOZE_TASK, handle_snooze_task, SNOOZE_TASK_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_REASSIGN_TASK, handle_reassign_task, REASSIGN_TASK_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_UPDATE_TASK, handle_update_task, UPDATE_TASK_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_REMOVE_TASK, handle_remove_task, REMOVE_TASK_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_ADD_LABEL, handle_add_label, ADD_LABEL_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_UPDATE_LABEL, handle_update_label, UPDATE_LABEL_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_REMOVE_LABEL, handle_remove_label, REMOVE_LABEL_SCHEMA)
@@ -436,11 +505,3 @@ async def async_unload_services(hass: HomeAssistant) -> None:
         SERVICE_REMOVE_LABEL,
     ):
         hass.services.async_remove(DOMAIN, service)
-
-
-def _resolve_entity_ids(call: ServiceCall) -> list[str]:
-    """Resolve entity IDs from a service call with target support."""
-    entity_ids = call.data.get("entity_id", [])
-    if isinstance(entity_ids, str):
-        entity_ids = [entity_ids]
-    return entity_ids

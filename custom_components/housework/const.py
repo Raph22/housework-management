@@ -3,7 +3,6 @@
 from enum import StrEnum
 
 DOMAIN = "housework"
-VERSION = "0.1.0"
 
 STORAGE_KEY = DOMAIN
 STORAGE_VERSION = 1

@@ -2,18 +2,12 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from datetime import date
-from pathlib import Path
 
-from homeassistant.components.binary_sensor import (
-    BinarySensorDeviceClass,
-    BinarySensorEntity,
-)
+from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -26,22 +20,6 @@ from .scheduling import format_frequency
 _LOGGER = logging.getLogger(__name__)
 
 
-def _load_frequency_translations(hass: HomeAssistant) -> dict:
-    """Load frequency translations for the current HA language."""
-    lang = hass.config.language or "en"
-    translations_dir = Path(__file__).parent / "translations"
-
-    for candidate in (lang, "en"):
-        path = translations_dir / f"{candidate}.json"
-        if path.is_file():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                return data.get("frequency", {})
-            except (json.JSONDecodeError, OSError):
-                continue
-    return {}
-
-
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -50,9 +28,6 @@ async def async_setup_entry(
     """Set up Housework binary sensors from a config entry."""
     data = hass.data[DOMAIN][entry.entry_id]
     coordinator: HouseworkCoordinator = data["coordinator"]
-    freq_translations = await hass.async_add_executor_job(
-        _load_frequency_translations, hass
-    )
 
     known_task_ids: set[str] = set()
 
@@ -65,9 +40,7 @@ async def async_setup_entry(
                 if task_id not in known_task_ids and task.enabled:
                     known_task_ids.add(task_id)
                     new_entities.append(
-                        HouseworkTaskSensor(
-                            coordinator, task, entry, freq_translations
-                        )
+                        HouseworkTaskSensor(coordinator, task, entry)
                     )
 
         if new_entities:
@@ -80,9 +53,7 @@ async def async_setup_entry(
             if task.enabled:
                 known_task_ids.add(task.id)
                 entities.append(
-                    HouseworkTaskSensor(
-                        coordinator, task, entry, freq_translations
-                    )
+                    HouseworkTaskSensor(coordinator, task, entry)
                 )
 
     async_add_entities(entities)
@@ -93,7 +64,6 @@ async def async_setup_entry(
 class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorEntity):
     """Binary sensor for a housework task. On when due or overdue."""
 
-    _attr_device_class = BinarySensorDeviceClass.PROBLEM
     _attr_has_entity_name = True
 
     def __init__(
@@ -101,12 +71,10 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
         coordinator: HouseworkCoordinator,
         task: Task,
         entry: ConfigEntry,
-        freq_translations: dict,
     ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, context=task.id)
         self._task_id = task.id
-        self._freq_translations = freq_translations
         self._attr_unique_id = f"housework_{task.id}"
         self._attr_icon = task.icon
         self._attr_device_info = DeviceInfo(
@@ -133,17 +101,6 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
         """Return the name of the sensor."""
         task = self._task
         return task.title if task else "Unknown Task"
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        if self._task is None and self.hass:
-            _LOGGER.debug("Task %s removed, cleaning up entity", self._task_id)
-            entity_registry = er.async_get(self.hass)
-            if entity_registry.async_get(self.entity_id):
-                entity_registry.async_remove(self.entity_id)
-            return
-        super()._handle_coordinator_update()
 
     @property
     def available(self) -> bool:
@@ -204,7 +161,7 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
             "last_completed": task.last_completed,
             "current_assignee": task.current_assignee,
             "assignee_name": assignee_name,
-            "frequency": format_frequency(task, self._freq_translations),
+            "frequency": format_frequency(task),
             "labels": label_names,
             "days_overdue": max(days_overdue, 0),
             "scheduling_mode": task.scheduling_mode,

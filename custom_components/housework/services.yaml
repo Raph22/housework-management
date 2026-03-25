@@ -28,6 +28,7 @@ add_task:
       selector:
         select:
           multiple: true
+          translation_key: "day_of_week"
           options:
             - "0"
             - "1"

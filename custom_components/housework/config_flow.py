@@ -6,9 +6,13 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig
 
 from .const import (
@@ -26,7 +30,7 @@ class HouseworkConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle the initial step."""
         await self.async_set_unique_id(DOMAIN)
         self._abort_if_unique_id_configured()
@@ -43,22 +47,17 @@ class HouseworkConfigFlow(ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
         """Return the options flow handler."""
-        return HouseworkOptionsFlow(config_entry)
+        return HouseworkOptionsFlow()
 
 
 class HouseworkOptionsFlow(OptionsFlow):
     """Handle options for Housework."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
-        """Initialize options flow."""
-        self._config_entry = config_entry
-
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
-            # Convert priority back to int for storage
             data = dict(user_input)
             if "default_priority" in data:
                 data["default_priority"] = int(data["default_priority"])
@@ -70,7 +69,7 @@ class HouseworkOptionsFlow(OptionsFlow):
                 {
                     vol.Optional(
                         "default_assignment_strategy",
-                        default=self._config_entry.options.get(
+                        default=self.config_entry.options.get(
                             "default_assignment_strategy",
                             DEFAULT_ASSIGNMENT_STRATEGY,
                         ),
@@ -82,7 +81,7 @@ class HouseworkOptionsFlow(OptionsFlow):
                     ),
                     vol.Optional(
                         "default_priority",
-                        default=str(self._config_entry.options.get(
+                        default=str(self.config_entry.options.get(
                             "default_priority",
                             DEFAULT_PRIORITY,
                         )),

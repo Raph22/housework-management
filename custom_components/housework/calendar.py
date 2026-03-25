@@ -14,7 +14,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN, FrequencyType
 from .coordinator import HouseworkCoordinator
 from .models import Task
-from .scheduling import advance_one_period
+from .scheduling import advance_one_period, fast_forward_to
 
 
 async def async_setup_entry(
@@ -98,6 +98,10 @@ class HouseworkCalendar(CoordinatorEntity[HouseworkCoordinator], CalendarEntity)
             except (ValueError, TypeError):
                 continue
 
+            # Fast-forward past dates far before the range
+            if due < range_start and task.frequency_type != FrequencyType.ONCE:
+                due = fast_forward_to(due, task, range_start)
+
             current_due = due
             count = 0
             while current_due <= range_end and count < max_projections:
@@ -136,5 +140,5 @@ def _task_to_event(
         end=due_date + timedelta(days=1),
         summary=summary,
         description=description,
-        uid=task.id,
+        uid=f"{task.id}_{due_date.isoformat()}",
     )

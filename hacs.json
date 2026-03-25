@@ -1,5 +1,6 @@
 {
   "name": "Housework",
+  "homeassistant": "2024.1.0",
   "render_readme": true,
   "domains": ["binary_sensor", "calendar", "sensor"]
 }

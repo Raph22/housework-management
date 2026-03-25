@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -37,7 +37,7 @@ class HouseworkDueTodaySensor(CoordinatorEntity[HouseworkCoordinator], SensorEnt
     _attr_translation_key = "tasks_due_today"
     _attr_icon = "mdi:calendar-today"
     _attr_native_unit_of_measurement = "tasks"
-    _attr_state_class = SensorStateClass.MEASUREMENT
+
 
     def __init__(
         self,
@@ -91,7 +91,7 @@ class HouseworkOverdueSensor(CoordinatorEntity[HouseworkCoordinator], SensorEnti
     _attr_translation_key = "overdue_tasks"
     _attr_icon = "mdi:calendar-alert"
     _attr_native_unit_of_measurement = "tasks"
-    _attr_state_class = SensorStateClass.MEASUREMENT
+
 
     def __init__(
         self,

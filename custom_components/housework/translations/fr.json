@@ -37,6 +37,17 @@
         "3": "P3 - Normale",
         "4": "P4 - Basse"
       }
+    },
+    "day_of_week": {
+      "options": {
+        "0": "Lundi",
+        "1": "Mardi",
+        "2": "Mercredi",
+        "3": "Jeudi",
+        "4": "Vendredi",
+        "5": "Samedi",
+        "6": "Dimanche"
+      }
     }
   },
   "services": {
@@ -228,17 +239,9 @@
       }
     }
   },
-  "frequency": {
-    "once": "Une fois",
-    "daily": "Quotidien",
-    "weekly": "Hebdomadaire",
-    "monthly": "Mensuel",
-    "every_n_days": "Tous les {n} jours",
-    "every_n_weeks": "Toutes les {n} semaines",
-    "every_n_months": "Tous les {n} mois",
-    "every_days": "Chaque {days}",
-    "day_suffix": " (jour {day})",
-    "day_names": ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"],
-    "unknown": "Inconnu"
+  "exceptions": {
+    "no_target": {
+      "message": "Aucune entité cible spécifiée."
+    }
   }
 }
