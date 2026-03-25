@@ -5,7 +5,6 @@
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/Raph22/housework-management",
-  "integration_type": "helper",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/Raph22/housework-management/issues",
   "requirements": [],
