@@ -58,7 +58,7 @@ class HouseworkCalendar(CoordinatorEntity[HouseworkCoordinator], CalendarEntity)
         best_due: date | None = None
 
         for task in self.coordinator.data.values():
-            if not task.enabled or not task.next_due:
+            if not task.next_due:
                 continue
             try:
                 due = date.fromisoformat(task.next_due)
@@ -90,7 +90,7 @@ class HouseworkCalendar(CoordinatorEntity[HouseworkCoordinator], CalendarEntity)
         max_projections = 52
 
         for task in self.coordinator.data.values():
-            if not task.enabled or not task.next_due:
+            if not task.next_due:
                 continue
 
             try:

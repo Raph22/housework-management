@@ -87,6 +87,11 @@ add_task:
       required: false
       selector:
         icon:
+    labels:
+      required: false
+      selector:
+        text:
+          multiple: true
     next_due:
       required: false
       selector:
@@ -165,10 +170,11 @@ update_task:
       required: false
       selector:
         icon:
-    enabled:
+    labels:
       required: false
       selector:
-        boolean:
+        text:
+          multiple: true
 
 remove_task:
   target:

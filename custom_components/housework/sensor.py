@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import date
 
+from homeassistant.util import dt as dt_util
+
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -70,10 +72,10 @@ class HouseworkDueTodaySensor(CoordinatorEntity[HouseworkCoordinator], SensorEnt
         if not self.coordinator.data:
             return []
 
-        today = date.today()
+        today = dt_util.now().date()
         result = []
         for task in self.coordinator.data.values():
-            if not task.enabled or not task.next_due:
+            if not task.next_due:
                 continue
             try:
                 due = date.fromisoformat(task.next_due)
@@ -113,7 +115,7 @@ class HouseworkOverdueSensor(CoordinatorEntity[HouseworkCoordinator], SensorEnti
     @property
     def extra_state_attributes(self) -> dict:
         """Return overdue task details as attributes."""
-        today = date.today()
+        today = dt_util.now().date()
         tasks = self._overdue_tasks()
         task_details = []
         for task in tasks:
@@ -135,10 +137,10 @@ class HouseworkOverdueSensor(CoordinatorEntity[HouseworkCoordinator], SensorEnti
         if not self.coordinator.data:
             return []
 
-        today = date.today()
+        today = dt_util.now().date()
         result = []
         for task in self.coordinator.data.values():
-            if not task.enabled or not task.next_due:
+            if not task.next_due:
                 continue
             try:
                 due = date.fromisoformat(task.next_due)

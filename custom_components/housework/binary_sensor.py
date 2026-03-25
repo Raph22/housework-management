@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from datetime import date
 
+from homeassistant.util import dt as dt_util
+
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
@@ -110,17 +112,21 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
 
     @property
     def is_on(self) -> bool | None:
-        """Return True if the task is due or overdue."""
+        """Return True if the task is due or overdue, False if completed/upcoming."""
         task = self._task
-        if task is None or task.next_due is None:
+        if task is None:
             return None
+
+        # Once tasks with no next_due are completed — not due
+        if task.next_due is None:
+            return False
 
         try:
             due_date = date.fromisoformat(task.next_due)
         except (ValueError, TypeError):
             return None
 
-        return date.today() >= due_date
+        return dt_util.now().date() >= due_date
 
     @property
     def extra_state_attributes(self) -> dict | None:
@@ -133,7 +139,7 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
         if task.next_due:
             try:
                 due_date = date.fromisoformat(task.next_due)
-                days_overdue = (date.today() - due_date).days
+                days_overdue = (dt_util.now().date() - due_date).days
             except (ValueError, TypeError):
                 pass
 

@@ -58,6 +58,7 @@ ADD_TASK_SCHEMA = vol.Schema(
             ASSIGNMENT_STRATEGIES
         ),
         vol.Optional("icon", default="mdi:broom"): cv.string,
+        vol.Optional("labels"): vol.All(cv.ensure_list, [cv.string]),
         vol.Optional("next_due"): cv.string,
     }
 )
@@ -97,7 +98,7 @@ UPDATE_TASK_SCHEMA = vol.Schema(
         vol.Optional("description"): cv.string,
         vol.Optional("priority"): vol.All(vol.Coerce(int), vol.Range(min=1, max=4)),
         vol.Optional("icon"): cv.string,
-        vol.Optional("enabled"): cv.boolean,
+        vol.Optional("labels"): vol.All(cv.ensure_list, [cv.string]),
     }
 )
 
@@ -399,7 +400,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         new_data = dict(subentry.data)
         new_title = subentry.title
-        for key in ("title", "description", "icon", "priority"):
+        for key in ("title", "description", "icon", "priority", "labels"):
             if key in call.data:
                 new_data[key] = call.data[key]
                 if key == "title":

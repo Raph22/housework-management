@@ -140,6 +140,7 @@
         "assignees": { "name": "Responsables", "description": "Personnes à qui attribuer." },
         "assignment_strategy": { "name": "Stratégie d'attribution", "description": "Comment alterner les responsables." },
         "icon": { "name": "Icône", "description": "Icône MDI pour la tâche." },
+        "labels": { "name": "Labels", "description": "Identifiants des labels à associer." },
         "next_due": { "name": "Première échéance", "description": "Date de la première échéance." }
       }
     },
@@ -174,7 +175,7 @@
         "description": { "name": "Description", "description": "Nouvelle description." },
         "priority": { "name": "Priorité", "description": "Nouveau niveau." },
         "icon": { "name": "Icône", "description": "Nouvelle icône." },
-        "enabled": { "name": "Activée", "description": "Activer ou désactiver." }
+        "labels": { "name": "Labels", "description": "Identifiants des labels à associer." }
       }
     },
     "remove_task": { "name": "Supprimer une tâche", "description": "Supprimer une tâche." },

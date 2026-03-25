@@ -140,6 +140,7 @@
         "assignees": { "name": "Assignees", "description": "Person entities to assign." },
         "assignment_strategy": { "name": "Assignment strategy", "description": "How to rotate assignees." },
         "icon": { "name": "Icon", "description": "MDI icon for the task." },
+        "labels": { "name": "Labels", "description": "Label IDs to categorize the task." },
         "next_due": { "name": "First due date", "description": "When the task is first due." }
       }
     },
@@ -174,7 +175,7 @@
         "description": { "name": "Description", "description": "New description." },
         "priority": { "name": "Priority", "description": "New priority." },
         "icon": { "name": "Icon", "description": "New icon." },
-        "enabled": { "name": "Enabled", "description": "Enable or disable." }
+        "labels": { "name": "Labels", "description": "Label IDs to attach." }
       }
     },
     "remove_task": { "name": "Remove task", "description": "Delete a task." },

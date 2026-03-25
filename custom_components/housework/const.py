@@ -70,5 +70,4 @@ TASK_MUTABLE_FIELDS = frozenset({
     "next_due",
     "labels",
     "icon",
-    "enabled",
 })

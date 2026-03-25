@@ -55,7 +55,6 @@ class Task:
     # Metadata
     labels: list[str] = field(default_factory=list)
     icon: str = DEFAULT_ICON
-    enabled: bool = True
 
     @classmethod
     def from_subentry(
@@ -90,7 +89,6 @@ class Task:
             created_at=state.get("created_at", _now_iso()),
             labels=subentry_data.get("labels", []),
             icon=subentry_data.get("icon", DEFAULT_ICON),
-            enabled=True,
         )
 
     def to_dict(self) -> dict:
@@ -113,7 +111,6 @@ class Task:
             "created_at": self.created_at,
             "labels": self.labels,
             "icon": self.icon,
-            "enabled": self.enabled,
         }
 
     @classmethod
@@ -139,7 +136,6 @@ class Task:
             created_at=data.get("created_at", _now_iso()),
             labels=data.get("labels", []),
             icon=data.get("icon", DEFAULT_ICON),
-            enabled=data.get("enabled", True),
         )
 
 

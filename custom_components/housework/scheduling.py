@@ -5,8 +5,15 @@ from __future__ import annotations
 import calendar as cal_mod
 from datetime import date, timedelta
 
+from homeassistant.util import dt as dt_util
+
 from .const import FrequencyType, SchedulingMode
 from .models import Task
+
+
+def _ha_today() -> date:
+    """Return today's date in the HA-configured timezone."""
+    return dt_util.now().date()
 
 
 def calculate_next_due(
@@ -25,7 +32,7 @@ def calculate_next_due(
     Returns:
         The next due date, or None for once tasks that are done.
     """
-    today = reference_date or date.today()
+    today = reference_date or _ha_today()
     last_completed = last_completed_override or task.last_completed
 
     if task.frequency_type == FrequencyType.ONCE:
@@ -68,7 +75,7 @@ def calculate_next_due_after_skip(task: Task) -> date | None:
         return None
 
     if not task.next_due:
-        return date.today()
+        return _ha_today()
 
     current_due = date.fromisoformat(task.next_due)
     return advance_one_period(current_due, task)
@@ -79,7 +86,7 @@ def calculate_initial_due(
     reference_date: date | None = None,
 ) -> date:
     """Calculate the initial next_due when a task is first created."""
-    today = reference_date or date.today()
+    today = reference_date or _ha_today()
 
     if task.frequency_type == FrequencyType.ONCE:
         if task.next_due:
