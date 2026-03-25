@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 import logging
+from types import MappingProxyType
 
 import voluptuous as vol
 
@@ -213,7 +214,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         # Create the subentry
         subentry = ConfigSubentry(
-            data=data,
+            data=MappingProxyType(data),
             subentry_type="task",
             title=title,
             unique_id=None,
