@@ -196,11 +196,6 @@
     }
   },
   "entity": {
-    "binary_sensor": {
-      "housework_task": {
-        "name": "Tâche ménagère"
-      }
-    },
     "sensor": {
       "tasks_due_today": {
         "name": "Tâches du jour"

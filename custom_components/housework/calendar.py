@@ -7,10 +7,11 @@ from datetime import date, datetime, timedelta
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, FrequencyType
 from .coordinator import HouseworkCoordinator
 from .models import Task
 from .scheduling import advance_one_period
@@ -32,7 +33,7 @@ class HouseworkCalendar(CoordinatorEntity[HouseworkCoordinator], CalendarEntity)
     """Calendar entity showing all housework tasks."""
 
     _attr_has_entity_name = True
-    _attr_name = "Housework"
+    _attr_translation_key = "housework"
     _attr_icon = "mdi:broom"
 
     def __init__(
@@ -43,9 +44,9 @@ class HouseworkCalendar(CoordinatorEntity[HouseworkCoordinator], CalendarEntity)
         """Initialize the calendar."""
         super().__init__(coordinator)
         self._attr_unique_id = "housework_calendar"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, "housework_hub")},
-        }
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, "housework_hub")},
+        )
 
     @property
     def event(self) -> CalendarEvent | None:
@@ -53,7 +54,6 @@ class HouseworkCalendar(CoordinatorEntity[HouseworkCoordinator], CalendarEntity)
         if not self.coordinator.data:
             return None
 
-        today = date.today()
         best_task: Task | None = None
         best_due: date | None = None
 
@@ -87,7 +87,7 @@ class HouseworkCalendar(CoordinatorEntity[HouseworkCoordinator], CalendarEntity)
         range_start = start_date.date()
         range_end = end_date.date()
         events: list[CalendarEvent] = []
-        max_projections = 52  # Limit future projections per task
+        max_projections = 52
 
         for task in self.coordinator.data.values():
             if not task.enabled or not task.next_due:
@@ -98,15 +98,13 @@ class HouseworkCalendar(CoordinatorEntity[HouseworkCoordinator], CalendarEntity)
             except (ValueError, TypeError):
                 continue
 
-            # Project forward from next_due
             current_due = due
             count = 0
             while current_due <= range_end and count < max_projections:
                 if current_due >= range_start:
                     events.append(_task_to_event(task, current_due, hass))
 
-                # Advance to next occurrence
-                if task.frequency_type == "once":
+                if task.frequency_type == FrequencyType.ONCE:
                     break
                 current_due = advance_one_period(current_due, task)
                 count += 1
@@ -119,7 +117,6 @@ def _task_to_event(
     task: Task, due_date: date, hass: HomeAssistant
 ) -> CalendarEvent:
     """Convert a task + due date to a CalendarEvent."""
-    # Build summary with assignee
     summary = task.title
     if task.current_assignee:
         state = hass.states.get(task.current_assignee)
@@ -127,7 +124,6 @@ def _task_to_event(
             name = state.attributes.get("friendly_name", task.current_assignee)
             summary = f"{task.title} ({name})"
 
-    # Build description
     parts = []
     if task.priority <= 2:
         parts.append(f"Priority: P{task.priority}")

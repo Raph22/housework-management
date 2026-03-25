@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import calendar
+import calendar as cal_mod
 from datetime import date, timedelta
 
 from .const import FrequencyType, SchedulingMode
@@ -25,14 +25,12 @@ def calculate_next_due(
     today = reference_date or date.today()
 
     if task.frequency_type == FrequencyType.ONCE:
-        # One-time tasks: next_due is set manually, no recalculation
         if task.next_due:
             return date.fromisoformat(task.next_due)
         return today
 
     # Determine the base date for calculation
     if task.scheduling_mode == SchedulingMode.ROLLING:
-        # Rolling: from last completion
         if task.last_completed:
             base = date.fromisoformat(task.last_completed[:10])
         else:
@@ -56,19 +54,27 @@ def calculate_next_due(
     return next_due
 
 
+def calculate_next_due_after_skip(task: Task) -> date | None:
+    """Calculate the next due date when a task is skipped.
+
+    Unlike complete, skip advances from the current next_due date
+    rather than from last_completed, regardless of scheduling mode.
+    """
+    if task.frequency_type == FrequencyType.ONCE:
+        return None
+
+    if not task.next_due:
+        return date.today()
+
+    current_due = date.fromisoformat(task.next_due)
+    return advance_one_period(current_due, task)
+
+
 def calculate_initial_due(
     task: Task,
     reference_date: date | None = None,
 ) -> date:
-    """Calculate the initial next_due when a task is first created.
-
-    Args:
-        task: The newly created task.
-        reference_date: Override for "today".
-
-    Returns:
-        The first due date.
-    """
+    """Calculate the initial next_due when a task is first created."""
     today = reference_date or date.today()
 
     if task.frequency_type == FrequencyType.ONCE:
@@ -82,7 +88,6 @@ def calculate_initial_due(
         return today
 
     if task.frequency_type == FrequencyType.MONTHLY and task.frequency_day_of_month:
-        # Next occurrence of this day-of-month
         try:
             candidate = today.replace(day=min(
                 task.frequency_day_of_month,
@@ -98,7 +103,6 @@ def calculate_initial_due(
             ))
         return candidate
 
-    # Default: due today
     return today
 
 
@@ -130,16 +134,7 @@ def advance_one_period(base: date, task: Task) -> date:
             )
         return base + timedelta(days=1)
 
-    if freq == FrequencyType.CUSTOM_DAYS:
-        return base + timedelta(days=value)
-
-    if freq == FrequencyType.CUSTOM_WEEKS:
-        return base + timedelta(weeks=value)
-
-    if freq == FrequencyType.CUSTOM_MONTHS:
-        return _add_months(base, value)
-
-    # Fallback
+    # Fallback (once or unknown)
     return base + timedelta(days=1)
 
 
@@ -154,11 +149,11 @@ def _add_months(d: date, months: int) -> date:
 
 def _days_in_month(year: int, month: int) -> int:
     """Return the number of days in a given month."""
-    return calendar.monthrange(year, month)[1]
+    return cal_mod.monthrange(year, month)[1]
 
 
 def _next_matching_weekday(from_date: date, weekdays: list[int]) -> date:
-    """Find the next date on or after from_date that matches one of the weekdays.
+    """Find the next date on or after from_date matching one of the weekdays.
 
     Weekdays: 0=Monday, 6=Sunday (Python convention).
     """
@@ -170,18 +165,11 @@ def _next_matching_weekday(from_date: date, weekdays: list[int]) -> date:
         if candidate.weekday() in weekdays:
             return candidate
 
-    # Should never reach here if weekdays is valid
     return from_date
 
 
 def format_frequency(task: Task, translations: dict | None = None) -> str:
-    """Return a human-readable frequency string for a task.
-
-    Args:
-        task: The task to format.
-        translations: Optional dict from translations/xx.json "frequency" key.
-            If None, falls back to English defaults.
-    """
+    """Return a human-readable frequency string for a task."""
     t = translations or {}
     freq = task.frequency_type
     value = task.frequency_value
@@ -219,17 +207,5 @@ def format_frequency(task: Task, translations: dict | None = None) -> str:
             template = t.get("every_days", "Every {days}")
             return template.format(days=", ".join(days))
         return t.get("weekly", "Weekly")
-
-    if freq in (FrequencyType.CUSTOM_DAYS,):
-        template = t.get("every_n_days", "Every {n} days")
-        return template.format(n=value)
-
-    if freq in (FrequencyType.CUSTOM_WEEKS,):
-        template = t.get("every_n_weeks", "Every {n} weeks")
-        return template.format(n=value)
-
-    if freq in (FrequencyType.CUSTOM_MONTHS,):
-        template = t.get("every_n_months", "Every {n} months")
-        return template.format(n=value)
 
     return t.get("unknown", "Unknown")

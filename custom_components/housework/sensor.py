@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from datetime import date
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -30,12 +31,13 @@ async def async_setup_entry(
 
 
 class HouseworkDueTodaySensor(CoordinatorEntity[HouseworkCoordinator], SensorEntity):
-    """Sensor showing count of tasks due today."""
+    """Sensor showing count of tasks due today (not overdue)."""
 
     _attr_has_entity_name = True
-    _attr_name = "Tasks Due Today"
+    _attr_translation_key = "tasks_due_today"
     _attr_icon = "mdi:calendar-today"
     _attr_native_unit_of_measurement = "tasks"
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(
         self,
@@ -45,9 +47,9 @@ class HouseworkDueTodaySensor(CoordinatorEntity[HouseworkCoordinator], SensorEnt
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._attr_unique_id = "housework_tasks_due_today"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, "housework_hub")},
-        }
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, "housework_hub")},
+        )
 
     @property
     def native_value(self) -> int:
@@ -64,7 +66,7 @@ class HouseworkDueTodaySensor(CoordinatorEntity[HouseworkCoordinator], SensorEnt
         }
 
     def _due_tasks(self) -> list:
-        """Return tasks due today or overdue."""
+        """Return tasks due today (exactly today, not overdue)."""
         if not self.coordinator.data:
             return []
 
@@ -77,7 +79,7 @@ class HouseworkDueTodaySensor(CoordinatorEntity[HouseworkCoordinator], SensorEnt
                 due = date.fromisoformat(task.next_due)
             except (ValueError, TypeError):
                 continue
-            if due <= today:
+            if due == today:
                 result.append(task)
         return result
 
@@ -86,9 +88,10 @@ class HouseworkOverdueSensor(CoordinatorEntity[HouseworkCoordinator], SensorEnti
     """Sensor showing count of overdue tasks."""
 
     _attr_has_entity_name = True
-    _attr_name = "Overdue Tasks"
+    _attr_translation_key = "overdue_tasks"
     _attr_icon = "mdi:calendar-alert"
     _attr_native_unit_of_measurement = "tasks"
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(
         self,
@@ -98,9 +101,9 @@ class HouseworkOverdueSensor(CoordinatorEntity[HouseworkCoordinator], SensorEnti
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._attr_unique_id = "housework_overdue_tasks"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, "housework_hub")},
-        }
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, "housework_hub")},
+        )
 
     @property
     def native_value(self) -> int:
@@ -128,7 +131,7 @@ class HouseworkOverdueSensor(CoordinatorEntity[HouseworkCoordinator], SensorEnti
         }
 
     def _overdue_tasks(self) -> list:
-        """Return tasks that are overdue (due before today, not today)."""
+        """Return tasks that are overdue (due before today)."""
         if not self.coordinator.data:
             return []
 

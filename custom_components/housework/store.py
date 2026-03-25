@@ -8,7 +8,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
-from .const import STORAGE_KEY, STORAGE_VERSION
+from .const import MAX_HISTORY_RECORDS, STORAGE_KEY, STORAGE_VERSION, TASK_MUTABLE_FIELDS
 from .models import CompletionRecord, Label, Task
 
 _LOGGER = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ class HouseworkStore:
         data = {
             "tasks": {tid: t.to_dict() for tid, t in self._tasks.items()},
             "history": [r.to_dict() for r in self._history],
-            "labels": {lid: l.to_dict() for lid, l in self._labels.items()},
+            "labels": {lid: label.to_dict() for lid, label in self._labels.items()},
             "assignment_state": self._assignment_state,
         }
         await self._store.async_save(data)
@@ -85,12 +85,15 @@ class HouseworkStore:
         return task
 
     async def async_update_task(self, task_id: str, updates: dict) -> Task | None:
-        """Update a task with partial data."""
+        """Update a task with partial data.
+
+        Only fields in TASK_MUTABLE_FIELDS are allowed.
+        """
         task = self._tasks.get(task_id)
         if task is None:
             return None
         for key, value in updates.items():
-            if hasattr(task, key):
+            if key in TASK_MUTABLE_FIELDS:
                 setattr(task, key, value)
         await self._async_save()
         return task
@@ -100,7 +103,6 @@ class HouseworkStore:
         if task_id not in self._tasks:
             return False
         del self._tasks[task_id]
-        # Clean up assignment state
         self._assignment_state.pop(task_id, None)
         await self._async_save()
         return True
@@ -117,13 +119,15 @@ class HouseworkStore:
         records = self._history
         if task_id:
             records = [r for r in records if r.task_id == task_id]
-        # Most recent first
         records = sorted(records, key=lambda r: r.completed_at, reverse=True)
         return records[offset : offset + limit]
 
     async def async_add_history(self, record: CompletionRecord) -> None:
-        """Add a completion record."""
+        """Add a completion record, pruning old records if over the limit."""
         self._history.append(record)
+        if len(self._history) > MAX_HISTORY_RECORDS:
+            self._history.sort(key=lambda r: r.completed_at, reverse=True)
+            self._history = self._history[:MAX_HISTORY_RECORDS]
         await self._async_save()
 
     # --- Labels ---
@@ -148,7 +152,7 @@ class HouseworkStore:
         if label is None:
             return None
         for key, value in updates.items():
-            if hasattr(label, key):
+            if key in ("name", "color", "icon"):
                 setattr(label, key, value)
         await self._async_save()
         return label

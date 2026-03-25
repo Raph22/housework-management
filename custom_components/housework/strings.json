@@ -196,11 +196,6 @@
     }
   },
   "entity": {
-    "binary_sensor": {
-      "housework_task": {
-        "name": "Housework task"
-      }
-    },
     "sensor": {
       "tasks_due_today": {
         "name": "Tasks due today"

@@ -14,6 +14,7 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -86,7 +87,6 @@ async def async_setup_entry(
 
     async_add_entities(entities)
 
-    # Listen for coordinator updates to add new task entities
     entry.async_on_unload(coordinator.async_add_listener(_async_add_new_entities))
 
 
@@ -108,14 +108,13 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
         self._task_id = task.id
         self._freq_translations = freq_translations
         self._attr_unique_id = f"housework_{task.id}"
-        self._attr_translation_key = "housework_task"
         self._attr_icon = task.icon
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, "housework_hub")},
-            "name": "Housework",
-            "manufacturer": "Housework Integration",
-            "model": "Task Tracker",
-        }
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, "housework_hub")},
+            name="Housework",
+            manufacturer="Housework Integration",
+            model="Task Tracker",
+        )
 
     @property
     def task_id(self) -> str:
@@ -139,7 +138,6 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         if self._task is None and self.hass:
-            # Task was removed from the store — remove this entity
             _LOGGER.debug("Task %s removed, cleaning up entity", self._task_id)
             entity_registry = er.async_get(self.hass)
             if entity_registry.async_get(self.entity_id):
@@ -190,20 +188,13 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
                     "friendly_name", task.current_assignee
                 )
 
-        # Resolve label names
-        store = None
-        for entry_data in self.hass.data.get(DOMAIN, {}).values():
-            if "store" in entry_data:
-                store = entry_data["store"]
-                break
-
+        # Resolve label names via coordinator's store
         label_names = []
-        if store:
-            all_labels = store.get_all_labels()
-            for label_id in task.labels:
-                label = all_labels.get(label_id)
-                if label:
-                    label_names.append(label.name)
+        all_labels = self.coordinator.store.get_all_labels()
+        for label_id in task.labels:
+            label = all_labels.get(label_id)
+            if label:
+                label_names.append(label.name)
 
         return {
             "task_id": task.id,

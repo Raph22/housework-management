@@ -14,9 +14,6 @@ add_task:
             - "weekly"
             - "monthly"
             - "day_of_week"
-            - "custom_days"
-            - "custom_weeks"
-            - "custom_months"
             - "once"
     frequency_value:
       required: false

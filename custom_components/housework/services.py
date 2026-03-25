@@ -7,7 +7,7 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall, callback
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import entity_registry as er
 import homeassistant.helpers.config_validation as cv
 
@@ -21,7 +21,7 @@ from .const import (
     FrequencyType,
 )
 from .models import CompletionRecord, Label, Task
-from .scheduling import calculate_initial_due, calculate_next_due
+from .scheduling import calculate_initial_due, calculate_next_due, calculate_next_due_after_skip
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -106,6 +106,9 @@ def _get_task_from_entity_id(hass: HomeAssistant, entity_id: str):
 
 async def async_setup_services(hass: HomeAssistant) -> None:
     """Set up Housework services."""
+    # Guard against re-registration on reload
+    if hass.services.has_service(DOMAIN, SERVICE_ADD_TASK):
+        return
 
     async def handle_add_task(call: ServiceCall) -> None:
         """Handle the add_task service call."""
@@ -178,40 +181,36 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         )
         await store.async_add_history(record)
 
-        # Update task
-        task.last_completed = completed_at_str
+        # Build updates dict — don't mutate task directly
+        updates: dict = {"last_completed": completed_at_str}
 
         # Calculate next due
+        task.last_completed = completed_at_str  # needed for calculate_next_due
         if task.frequency_type != FrequencyType.ONCE:
             next_due = calculate_next_due(task)
-            if next_due:
-                task.next_due = next_due.isoformat()
+            updates["next_due"] = next_due.isoformat() if next_due else None
         else:
-            task.next_due = None  # Once task is done
+            updates["next_due"] = None
 
         # Update assignment
+        current_assignee = task.current_assignee
         if completed_by and task.assignees:
             state = store.get_assignment_state(task.id)
             state = update_assignment_state(state, completed_by)
-            task.current_assignee = determine_next_assignee(task, state)
+            current_assignee = determine_next_assignee(task, state)
             await store.async_update_assignment_state(task.id, state)
+        updates["current_assignee"] = current_assignee
 
-        updates = {
-            "last_completed": task.last_completed,
-            "next_due": task.next_due,
-            "current_assignee": task.current_assignee,
-        }
         await store.async_update_task(task.id, updates)
         await coordinator.async_request_refresh()
 
-        # Fire event
         hass.bus.async_fire(
             "housework_task_completed",
             {
                 "task_id": task.id,
                 "title": task.title,
                 "completed_by": completed_by,
-                "next_due": task.next_due,
+                "next_due": updates["next_due"],
             },
         )
 
@@ -221,10 +220,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         """Handle the skip_task service call."""
         entity_ids = _resolve_entity_ids(call)
         for entity_id in entity_ids:
-            await _skip_single_task(hass, call, entity_id)
+            await _skip_single_task(hass, entity_id)
 
     async def _skip_single_task(
-        hass: HomeAssistant, call: ServiceCall, entity_id: str
+        hass: HomeAssistant, entity_id: str
     ) -> None:
         task, store, coordinator = _get_task_from_entity_id(hass, entity_id)
         if task is None:
@@ -239,13 +238,11 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         )
         await store.async_add_history(record)
 
-        # Advance next_due without updating last_completed
-        if task.frequency_type != FrequencyType.ONCE:
-            next_due = calculate_next_due(task)
-            if next_due:
-                task.next_due = next_due.isoformat()
+        # Advance from current next_due (not from last_completed)
+        next_due = calculate_next_due_after_skip(task)
+        next_due_str = next_due.isoformat() if next_due else None
 
-        await store.async_update_task(task.id, {"next_due": task.next_due})
+        await store.async_update_task(task.id, {"next_due": next_due_str})
         await coordinator.async_request_refresh()
 
         hass.bus.async_fire(
@@ -253,7 +250,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             {
                 "task_id": task.id,
                 "title": task.title,
-                "next_due": task.next_due,
+                "next_due": next_due_str,
             },
         )
 
@@ -286,9 +283,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         )
         await store.async_add_history(record)
 
-        # Set next_due to snooze date
-        task.next_due = snooze_until
-        await store.async_update_task(task.id, {"next_due": task.next_due})
+        await store.async_update_task(task.id, {"next_due": snooze_until})
         await coordinator.async_request_refresh()
 
         hass.bus.async_fire(
@@ -317,7 +312,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             _LOGGER.error("Task not found for entity: %s", entity_id)
             return
 
-        task.current_assignee = assignee
         await store.async_update_task(task.id, {"current_assignee": assignee})
         await coordinator.async_request_refresh()
         _LOGGER.info("Reassigned task: %s to %s", task.title, assignee)
@@ -362,9 +356,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         title = task.title
         await store.async_remove_task(task.id)
-
-        # Coordinator refresh will trigger entity self-removal via
-        # _handle_coordinator_update detecting the missing task
         await coordinator.async_request_refresh()
         _LOGGER.info("Removed task: %s", title)
 
