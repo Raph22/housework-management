@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import logging
 
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
@@ -18,8 +19,18 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = ["binary_sensor", "calendar", "sensor"]
 
+type HouseworkConfigEntry = ConfigEntry[HouseworkRuntimeData]
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+
+@dataclass
+class HouseworkRuntimeData:
+    """Runtime data for the Housework integration."""
+
+    store: HouseworkStore
+    coordinator: HouseworkCoordinator
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: HouseworkConfigEntry) -> bool:
     """Set up Housework from a config entry."""
     store = HouseworkStore(hass)
     await store.async_load()
@@ -33,11 +44,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = HouseworkCoordinator(hass, store, entry)
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = {
-        "store": store,
-        "coordinator": coordinator,
-    }
+    entry.runtime_data = HouseworkRuntimeData(store=store, coordinator=coordinator)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_setup_services(hass)
@@ -105,16 +112,11 @@ async def _ensure_runtime_state(
 async def _reconcile_runtime_after_edit(
     store: HouseworkStore, subentry: ConfigSubentry
 ) -> None:
-    """Reconcile runtime state after a subentry is reconfigured.
-
-    - If frequency changed, recalculate next_due from last_completed
-    - If assignees changed and current_assignee is no longer valid, reset it
-    """
+    """Reconcile runtime state after a subentry is reconfigured."""
     state = store.get_runtime_state(subentry.subentry_id)
     data = dict(subentry.data)
     updates = {}
 
-    # Rebuild task to check new config vs current runtime
     task = Task.from_subentry(subentry.subentry_id, data, state)
 
     # Recalculate next_due based on new frequency settings
@@ -139,29 +141,25 @@ async def _reconcile_runtime_after_edit(
 
 
 async def _async_options_updated(
-    hass: HomeAssistant, entry: ConfigEntry
+    hass: HomeAssistant, entry: HouseworkConfigEntry
 ) -> None:
     """Reload the integration when options are updated."""
     await hass.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: HouseworkConfigEntry) -> bool:
     """Unload a Housework config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
-        if not hass.data[DOMAIN]:
-            await async_unload_services(hass)
-            hass.data.pop(DOMAIN)
+        await async_unload_services(hass)
 
     return unload_ok
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_remove_entry(hass: HomeAssistant, entry: HouseworkConfigEntry) -> None:
     """Clean up storage when the integration is removed."""
-    entry_data = hass.data.get(DOMAIN, {}).get(entry.entry_id)
-    if entry_data and "store" in entry_data:
-        await entry_data["store"].async_remove()
+    if hasattr(entry, "runtime_data") and entry.runtime_data:
+        await entry.runtime_data.store.async_remove()
     else:
         store = HouseworkStore(hass)
         await store.async_remove()

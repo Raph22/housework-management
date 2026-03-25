@@ -179,6 +179,13 @@
       }
     },
     "remove_task": { "name": "Supprimer une tâche", "description": "Supprimer une tâche." },
+    "reopen_task": {
+      "name": "Rouvrir une tâche",
+      "description": "Définir une nouvelle échéance sur une tâche terminée ou reportée.",
+      "fields": {
+        "next_due": { "name": "Date d'échéance", "description": "Nouvelle date d'échéance." }
+      }
+    },
     "add_label": {
       "name": "Ajouter un label",
       "description": "Créer un nouveau label.",

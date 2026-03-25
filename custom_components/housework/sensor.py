@@ -23,8 +23,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Housework sensors from a config entry."""
-    data = hass.data[DOMAIN][entry.entry_id]
-    coordinator: HouseworkCoordinator = data["coordinator"]
+    coordinator = entry.runtime_data.coordinator
 
     async_add_entities([
         HouseworkDueTodaySensor(coordinator, entry),

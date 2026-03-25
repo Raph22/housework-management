@@ -5,14 +5,16 @@ from __future__ import annotations
 import logging
 from datetime import date
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
+from homeassistant.components.binary_sensor import (
+    BinarySensorDeviceClass,
+    BinarySensorEntity,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
 from .coordinator import HouseworkCoordinator, SUBENTRY_TYPE_TASK
 from .models import Task
 from .scheduling import format_frequency
@@ -26,8 +28,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Housework binary sensors from a config entry."""
-    data = hass.data[DOMAIN][entry.entry_id]
-    coordinator: HouseworkCoordinator = data["coordinator"]
+    coordinator = entry.runtime_data.coordinator
 
     known_task_ids: set[str] = set()
 
@@ -62,6 +63,7 @@ async def async_setup_entry(
 class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorEntity):
     """Binary sensor for a housework task. On when due or overdue."""
 
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
     _attr_has_entity_name = True
 
     def __init__(

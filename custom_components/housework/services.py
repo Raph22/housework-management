@@ -36,6 +36,7 @@ SERVICE_SNOOZE_TASK = "snooze_task"
 SERVICE_REASSIGN_TASK = "reassign_task"
 SERVICE_UPDATE_TASK = "update_task"
 SERVICE_REMOVE_TASK = "remove_task"
+SERVICE_REOPEN_TASK = "reopen_task"
 SERVICE_ADD_LABEL = "add_label"
 SERVICE_UPDATE_LABEL = "update_label"
 SERVICE_REMOVE_LABEL = "remove_label"
@@ -99,6 +100,13 @@ UPDATE_TASK_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
+REOPEN_TASK_SCHEMA = vol.Schema(
+    {
+        vol.Required("next_due"): cv.string,
+    },
+    extra=vol.ALLOW_EXTRA,
+)
+
 ADD_LABEL_SCHEMA = vol.Schema(
     {
         vol.Required("name"): cv.string,
@@ -125,12 +133,10 @@ REMOVE_LABEL_SCHEMA = vol.Schema(
 
 def _get_entry_and_data(hass: HomeAssistant):
     """Get the config entry, store, and coordinator."""
-    for entry_id, entry_data in hass.data.get(DOMAIN, {}).items():
-        if "store" in entry_data:
-            entries = hass.config_entries.async_entries(DOMAIN)
-            for entry in entries:
-                if entry.entry_id == entry_id:
-                    return entry, entry_data["store"], entry_data["coordinator"]
+    entries = hass.config_entries.async_entries(DOMAIN)
+    for entry in entries:
+        if hasattr(entry, "runtime_data") and entry.runtime_data:
+            return entry, entry.runtime_data.store, entry.runtime_data.coordinator
     return None, None, None
 
 
@@ -440,6 +446,29 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         await coordinator.async_request_refresh()
         _LOGGER.info("Removed task: %s", title)
 
+    async def handle_reopen_task(call: ServiceCall) -> None:
+        """Handle the reopen_task service call — set a new due date on a completed task."""
+        entity_ids = await _async_resolve_entity_ids(hass, call)
+        next_due = call.data["next_due"]
+        if isinstance(next_due, date):
+            next_due = next_due.isoformat()
+        for entity_id in entity_ids:
+            await _reopen_single_task(hass, entity_id, next_due)
+
+    async def _reopen_single_task(
+        hass: HomeAssistant, entity_id: str, next_due: str
+    ) -> None:
+        task, store, coordinator, entry = _get_task_from_entity_id(hass, entity_id)
+        if task is None:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="task_not_found",
+            )
+
+        await store.async_update_runtime_state(task.id, {"next_due": next_due})
+        await coordinator.async_request_refresh()
+        _LOGGER.info("Reopened task: %s, due %s", task.title, next_due)
+
     async def handle_add_label(call: ServiceCall) -> None:
         """Handle the add_label service call."""
         entry, store, coordinator = _get_entry_and_data(hass)
@@ -509,6 +538,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     hass.services.async_register(DOMAIN, SERVICE_REASSIGN_TASK, handle_reassign_task, REASSIGN_TASK_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_UPDATE_TASK, handle_update_task, UPDATE_TASK_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_REMOVE_TASK, handle_remove_task)
+    hass.services.async_register(DOMAIN, SERVICE_REOPEN_TASK, handle_reopen_task, REOPEN_TASK_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_ADD_LABEL, handle_add_label, ADD_LABEL_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_UPDATE_LABEL, handle_update_label, UPDATE_LABEL_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_REMOVE_LABEL, handle_remove_label, REMOVE_LABEL_SCHEMA)
@@ -524,6 +554,7 @@ async def async_unload_services(hass: HomeAssistant) -> None:
         SERVICE_REASSIGN_TASK,
         SERVICE_UPDATE_TASK,
         SERVICE_REMOVE_TASK,
+        SERVICE_REOPEN_TASK,
         SERVICE_ADD_LABEL,
         SERVICE_UPDATE_LABEL,
         SERVICE_REMOVE_LABEL,

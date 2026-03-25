@@ -182,6 +182,17 @@ remove_task:
       integration: housework
       domain: binary_sensor
 
+reopen_task:
+  target:
+    entity:
+      integration: housework
+      domain: binary_sensor
+  fields:
+    next_due:
+      required: true
+      selector:
+        date:
+
 add_label:
   fields:
     name:

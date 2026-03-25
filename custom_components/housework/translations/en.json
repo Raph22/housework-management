@@ -179,6 +179,13 @@
       }
     },
     "remove_task": { "name": "Remove task", "description": "Delete a task." },
+    "reopen_task": {
+      "name": "Reopen task",
+      "description": "Set a new due date on a completed or snoozed task.",
+      "fields": {
+        "next_due": { "name": "Due date", "description": "New due date for the task." }
+      }
+    },
     "add_label": {
       "name": "Add label",
       "description": "Create a new label.",
