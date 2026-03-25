@@ -5,13 +5,12 @@ from __future__ import annotations
 import logging
 from datetime import date
 
-from homeassistant.util import dt as dt_util
-
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .coordinator import HouseworkCoordinator, SUBENTRY_TYPE_TASK
@@ -35,36 +34,27 @@ async def async_setup_entry(
     @callback
     def _async_add_new_entities() -> None:
         """Add entities for any new tasks."""
-        new_entities = []
-        if coordinator.data:
-            for task_id, task in coordinator.data.items():
-                if task_id not in known_task_ids:
-                    known_task_ids.add(task_id)
-                    new_entities.append(
-                        HouseworkTaskSensor(coordinator, task, entry)
-                    )
-
-        if new_entities:
-            async_add_entities(new_entities)
+        if not coordinator.data:
+            return
+        for task_id, task in coordinator.data.items():
+            if task_id not in known_task_ids:
+                known_task_ids.add(task_id)
+                async_add_entities(
+                    [HouseworkTaskSensor(coordinator, task)],
+                    config_subentry_id=task_id,
+                )
 
     # Add entities for existing task subentries
-    entities = []
     for subentry in entry.subentries.values():
         if subentry.subentry_type != SUBENTRY_TYPE_TASK:
             continue
         task_id = subentry.subentry_id
         if coordinator.data and task_id in coordinator.data:
             known_task_ids.add(task_id)
-            entities.append(
-                HouseworkTaskSensor(
-                    coordinator,
-                    coordinator.data[task_id],
-                    entry,
-                    subentry_id=task_id,
-                )
+            async_add_entities(
+                [HouseworkTaskSensor(coordinator, coordinator.data[task_id])],
+                config_subentry_id=task_id,
             )
-
-    async_add_entities(entities)
 
     entry.async_on_unload(coordinator.async_add_listener(_async_add_new_entities))
 
@@ -78,8 +68,6 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
         self,
         coordinator: HouseworkCoordinator,
         task: Task,
-        entry: ConfigEntry,
-        subentry_id: str | None = None,
     ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, context=task.id)

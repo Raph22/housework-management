@@ -46,6 +46,7 @@ class HouseworkCalendar(CoordinatorEntity[HouseworkCoordinator], CalendarEntity)
         self._attr_unique_id = "housework_calendar"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, "housework_hub")},
+            name="Housework",
         )
 
     @property

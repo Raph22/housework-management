@@ -216,6 +216,9 @@
     }
   },
   "exceptions": {
-    "no_target": { "message": "Aucune entité cible spécifiée." }
+    "no_target": { "message": "Aucune entité cible spécifiée." },
+    "task_not_found": { "message": "Tâche introuvable pour l'entité spécifiée." },
+    "integration_not_found": { "message": "Intégration Housework introuvable." },
+    "label_not_found": { "message": "Label introuvable." }
   }
 }

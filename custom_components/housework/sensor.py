@@ -51,6 +51,7 @@ class HouseworkDueTodaySensor(CoordinatorEntity[HouseworkCoordinator], SensorEnt
         self._attr_unique_id = "housework_tasks_due_today"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, "housework_hub")},
+            name="Housework",
         )
 
     @property
@@ -105,6 +106,7 @@ class HouseworkOverdueSensor(CoordinatorEntity[HouseworkCoordinator], SensorEnti
         self._attr_unique_id = "housework_overdue_tasks"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, "housework_hub")},
+            name="Housework",
         )
 
     @property

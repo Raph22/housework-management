@@ -53,21 +53,3 @@ DEFAULT_ASSIGNMENT_STRATEGY = AssignmentStrategy.ROUND_ROBIN
 FREQUENCY_TYPES = [ft.value for ft in FrequencyType]
 ASSIGNMENT_STRATEGIES = [s.value for s in AssignmentStrategy]
 SCHEDULING_MODES = [m.value for m in SchedulingMode]
-
-TASK_MUTABLE_FIELDS = frozenset({
-    "title",
-    "description",
-    "priority",
-    "frequency_type",
-    "frequency_value",
-    "frequency_days_of_week",
-    "frequency_day_of_month",
-    "scheduling_mode",
-    "assignees",
-    "assignment_strategy",
-    "current_assignee",
-    "last_completed",
-    "next_due",
-    "labels",
-    "icon",
-})

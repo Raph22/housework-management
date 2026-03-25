@@ -22,6 +22,8 @@ from .const import (
     CompletionAction,
     FrequencyType,
 )
+from homeassistant.config_entries import ConfigSubentry
+
 from .models import CompletionRecord, Label, Task
 from .scheduling import calculate_initial_due, calculate_next_due, calculate_next_due_after_skip
 
@@ -44,18 +46,18 @@ ADD_TASK_SCHEMA = vol.Schema(
         vol.Required("frequency_type"): vol.In(FREQUENCY_TYPES),
         vol.Optional("frequency_value", default=1): vol.Coerce(int),
         vol.Optional("frequency_days_of_week"): vol.All(
-            cv.ensure_list, [vol.Coerce(int)]
+            cv.ensure_list, [vol.All(vol.Coerce(int), vol.Range(min=0, max=6))]
         ),
         vol.Optional("frequency_day_of_month"): vol.All(
             vol.Coerce(int), vol.Range(min=1, max=31)
         ),
         vol.Optional("scheduling_mode", default="rolling"): vol.In(SCHEDULING_MODES),
-        vol.Optional("priority", default=3): vol.All(
+        vol.Optional("priority"): vol.All(
             vol.Coerce(int), vol.Range(min=1, max=4)
         ),
         vol.Optional("description", default=""): cv.string,
         vol.Optional("assignees"): vol.All(cv.ensure_list, [cv.string]),
-        vol.Optional("assignment_strategy", default="round_robin"): vol.In(
+        vol.Optional("assignment_strategy"): vol.In(
             ASSIGNMENT_STRATEGIES
         ),
         vol.Optional("icon", default="mdi:broom"): cv.string,
@@ -178,20 +180,20 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         """Handle the add_task service call — creates a config subentry."""
         entry, store, coordinator = _get_entry_and_data(hass)
         if entry is None:
-            _LOGGER.error("Housework config entry not found")
-            return
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="integration_not_found",
+            )
 
         data = dict(call.data)
         options = dict(entry.options)
 
-        # Apply option defaults
-        if "priority" not in call.data or call.data["priority"] == 3:
-            data.setdefault("priority", options.get("default_priority", 3))
-        if "assignment_strategy" not in call.data:
-            data.setdefault(
-                "assignment_strategy",
-                options.get("default_assignment_strategy", "round_robin"),
-            )
+        # Apply option defaults only when the user didn't provide a value
+        data.setdefault("priority", options.get("default_priority", 3))
+        data.setdefault(
+            "assignment_strategy",
+            options.get("default_assignment_strategy", "round_robin"),
+        )
 
         title = data["title"]
 
@@ -203,20 +205,24 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             initial_due = calculate_initial_due(task).isoformat()
 
         # Create the subentry
-        subentry = {
-            "subentry_type": "task",
-            "title": title,
-            "data": data,
-            "unique_id": None,
-        }
-        result = hass.config_entries.async_add_subentry(entry, subentry)
+        subentry = ConfigSubentry(
+            data=data,
+            subentry_type="task",
+            title=title,
+            unique_id=None,
+        )
+        hass.config_entries.async_add_subentry(entry, subentry)
 
-        # Initialize runtime state
-        runtime = {"next_due": initial_due, "created_at": datetime.now(timezone.utc).isoformat()}
+        # The subentry now has a subentry_id assigned by HA.
+        # Initialize runtime state. The subentry change listener in __init__.py
+        # also handles this, but we do it here to ensure it's ready before refresh.
+        runtime = {
+            "next_due": initial_due,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
         if data.get("assignees"):
             runtime["current_assignee"] = data["assignees"][0]
-        await store.async_update_runtime_state(result.subentry_id, runtime)
-
+        await store.async_update_runtime_state(subentry.subentry_id, runtime)
         await coordinator.async_request_refresh()
         _LOGGER.info("Added task: %s", title)
 
@@ -231,8 +237,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     ) -> None:
         task, store, coordinator, entry = _get_task_from_entity_id(hass, entity_id)
         if task is None:
-            _LOGGER.error("Task not found for entity: %s", entity_id)
-            return
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="task_not_found",
+            )
 
         completed_by = call.data.get("completed_by", task.current_assignee or "")
         completed_at = call.data.get("completed_at")
@@ -291,8 +299,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     async def _skip_single_task(hass: HomeAssistant, entity_id: str) -> None:
         task, store, coordinator, entry = _get_task_from_entity_id(hass, entity_id)
         if task is None:
-            _LOGGER.error("Task not found for entity: %s", entity_id)
-            return
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="task_not_found",
+            )
 
         record = CompletionRecord(
             task_id=task.id,
@@ -325,8 +335,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     ) -> None:
         task, store, coordinator, entry = _get_task_from_entity_id(hass, entity_id)
         if task is None:
-            _LOGGER.error("Task not found for entity: %s", entity_id)
-            return
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="task_not_found",
+            )
 
         if isinstance(snooze_until, date):
             snooze_until = snooze_until.isoformat()
@@ -360,8 +372,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     ) -> None:
         task, store, coordinator, entry = _get_task_from_entity_id(hass, entity_id)
         if task is None:
-            _LOGGER.error("Task not found for entity: %s", entity_id)
-            return
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="task_not_found",
+            )
 
         await store.async_update_runtime_state(task.id, {"current_assignee": assignee})
         await coordinator.async_request_refresh()
@@ -378,14 +392,17 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     ) -> None:
         task, store, coordinator, entry = _get_task_from_entity_id(hass, entity_id)
         if task is None or entry is None:
-            _LOGGER.error("Task not found for entity: %s", entity_id)
-            return
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="task_not_found",
+            )
 
-        # Find the subentry and update it
         subentry = entry.subentries.get(task.id)
         if subentry is None:
-            _LOGGER.error("Subentry not found for task: %s", task.id)
-            return
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="task_not_found",
+            )
 
         new_data = dict(subentry.data)
         new_title = subentry.title
@@ -410,8 +427,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     async def _remove_single_task(hass: HomeAssistant, entity_id: str) -> None:
         task, store, coordinator, entry = _get_task_from_entity_id(hass, entity_id)
         if task is None or entry is None:
-            _LOGGER.error("Task not found for entity: %s", entity_id)
-            return
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="task_not_found",
+            )
 
         title = task.title
         # Remove runtime state
@@ -425,8 +444,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         """Handle the add_label service call."""
         entry, store, coordinator = _get_entry_and_data(hass)
         if store is None:
-            _LOGGER.error("Housework store not found")
-            return
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="integration_not_found",
+            )
 
         label = Label(
             name=call.data["name"],
@@ -440,8 +461,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         """Handle the update_label service call."""
         entry, store, coordinator = _get_entry_and_data(hass)
         if store is None:
-            _LOGGER.error("Housework store not found")
-            return
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="integration_not_found",
+            )
 
         label_id = call.data["label_id"]
         updates = {}
@@ -452,7 +475,10 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         if updates:
             result = await store.async_update_label(label_id, updates)
             if result is None:
-                _LOGGER.error("Label not found: %s", label_id)
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="label_not_found",
+                )
             else:
                 _LOGGER.info("Updated label: %s", result.name)
 
@@ -460,13 +486,18 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         """Handle the remove_label service call."""
         entry, store, coordinator = _get_entry_and_data(hass)
         if store is None:
-            _LOGGER.error("Housework store not found")
-            return
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="integration_not_found",
+            )
 
         label_id = call.data["label_id"]
         removed = await store.async_remove_label(label_id)
         if not removed:
-            _LOGGER.error("Label not found: %s", label_id)
+            raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="label_not_found",
+                )
         else:
             _LOGGER.info("Removed label: %s", label_id)
 

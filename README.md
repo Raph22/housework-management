@@ -153,7 +153,7 @@ automation:
         target:
           entity_id: binary_sensor.housework_clean_bathroom
         data:
-          completed_by: "{{ trigger.user_id | default('') }}"
+          completed_by: person.alice
 ```
 
 ### Daily overdue summary
