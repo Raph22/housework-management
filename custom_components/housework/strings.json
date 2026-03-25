@@ -21,6 +21,65 @@
       }
     }
   },
+  "config_subentries": {
+    "task": {
+      "title": "Housework task",
+      "entry_type": "Task",
+      "initiate_flow": {
+        "user": "Add task",
+        "reconfigure": "Edit task"
+      },
+      "step": {
+        "user": {
+          "title": "Add a new task",
+          "data": {
+            "title": "Task name",
+            "frequency_type": "Frequency",
+            "frequency_value": "Every N periods",
+            "frequency_days_of_week": "Days of the week",
+            "frequency_day_of_month": "Day of the month",
+            "scheduling_mode": "Scheduling mode",
+            "priority": "Priority",
+            "assignees": "Assignees",
+            "assignment_strategy": "Assignment strategy",
+            "description": "Description",
+            "icon": "Icon"
+          },
+          "data_description": {
+            "frequency_value": "How many days/weeks/months between occurrences.",
+            "frequency_days_of_week": "Only for 'Specific days of week' frequency.",
+            "frequency_day_of_month": "Only for 'Monthly' frequency (1-31).",
+            "scheduling_mode": "Rolling adjusts to completion date. Fixed keeps original cadence."
+          }
+        },
+        "reconfigure": {
+          "title": "Edit task",
+          "data": {
+            "title": "Task name",
+            "frequency_type": "Frequency",
+            "frequency_value": "Every N periods",
+            "frequency_days_of_week": "Days of the week",
+            "frequency_day_of_month": "Day of the month",
+            "scheduling_mode": "Scheduling mode",
+            "priority": "Priority",
+            "assignees": "Assignees",
+            "assignment_strategy": "Assignment strategy",
+            "description": "Description",
+            "icon": "Icon"
+          },
+          "data_description": {
+            "frequency_value": "How many days/weeks/months between occurrences.",
+            "frequency_days_of_week": "Only for 'Specific days of week' frequency.",
+            "frequency_day_of_month": "Only for 'Monthly' frequency (1-31).",
+            "scheduling_mode": "Rolling adjusts to completion date. Fixed keeps original cadence."
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Task updated successfully."
+      }
+    }
+  },
   "selector": {
     "assignment_strategy": {
       "options": {
@@ -48,6 +107,21 @@
         "5": "Saturday",
         "6": "Sunday"
       }
+    },
+    "frequency_type": {
+      "options": {
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly",
+        "day_of_week": "Specific days of week",
+        "once": "Once"
+      }
+    },
+    "scheduling_mode": {
+      "options": {
+        "rolling": "Rolling",
+        "fixed": "Fixed"
+      }
     }
   },
   "services": {
@@ -55,193 +129,92 @@
       "name": "Add task",
       "description": "Create a new housework task.",
       "fields": {
-        "title": {
-          "name": "Title",
-          "description": "Name of the task."
-        },
-        "frequency_type": {
-          "name": "Frequency type",
-          "description": "How often the task repeats."
-        },
-        "frequency_value": {
-          "name": "Frequency value",
-          "description": "Repeat interval (e.g., every N days/weeks/months). Default: 1."
-        },
-        "frequency_days_of_week": {
-          "name": "Days of week",
-          "description": "Days of the week (0=Mon, 6=Sun). Only for 'day_of_week' type."
-        },
-        "frequency_day_of_month": {
-          "name": "Day of month",
-          "description": "Day of the month (1-31). Only for 'monthly' type."
-        },
-        "scheduling_mode": {
-          "name": "Scheduling mode",
-          "description": "'Rolling' calculates from last completion, 'Fixed' keeps original cadence."
-        },
-        "priority": {
-          "name": "Priority",
-          "description": "Priority level (1=urgent, 4=low). Default: 3."
-        },
-        "description": {
-          "name": "Description",
-          "description": "Optional details about the task."
-        },
-        "assignees": {
-          "name": "Assignees",
-          "description": "Person entities to assign this task to."
-        },
-        "assignment_strategy": {
-          "name": "Assignment strategy",
-          "description": "How to rotate assignees."
-        },
-        "icon": {
-          "name": "Icon",
-          "description": "MDI icon for the task."
-        },
-        "next_due": {
-          "name": "First due date",
-          "description": "When the task is first due. Defaults to today."
-        }
+        "title": { "name": "Title", "description": "Name of the task." },
+        "frequency_type": { "name": "Frequency type", "description": "How often the task repeats." },
+        "frequency_value": { "name": "Frequency value", "description": "Repeat interval (every N days/weeks/months)." },
+        "frequency_days_of_week": { "name": "Days of week", "description": "Days of the week (0=Mon, 6=Sun)." },
+        "frequency_day_of_month": { "name": "Day of month", "description": "Day of the month (1-31)." },
+        "scheduling_mode": { "name": "Scheduling mode", "description": "Rolling or Fixed scheduling." },
+        "priority": { "name": "Priority", "description": "Priority level (1=urgent, 4=low)." },
+        "description": { "name": "Description", "description": "Optional details." },
+        "assignees": { "name": "Assignees", "description": "Person entities to assign." },
+        "assignment_strategy": { "name": "Assignment strategy", "description": "How to rotate assignees." },
+        "icon": { "name": "Icon", "description": "MDI icon for the task." },
+        "next_due": { "name": "First due date", "description": "When the task is first due." }
       }
     },
     "complete_task": {
       "name": "Complete task",
       "description": "Mark a housework task as completed.",
       "fields": {
-        "completed_by": {
-          "name": "Completed by",
-          "description": "Person who completed the task. Defaults to current assignee."
-        },
-        "completed_at": {
-          "name": "Completed at",
-          "description": "When the task was completed. Defaults to now."
-        }
+        "completed_by": { "name": "Completed by", "description": "Person who completed the task." },
+        "completed_at": { "name": "Completed at", "description": "When the task was completed." }
       }
     },
-    "skip_task": {
-      "name": "Skip task",
-      "description": "Skip the current occurrence of a task without completing it."
-    },
+    "skip_task": { "name": "Skip task", "description": "Skip the current occurrence." },
     "snooze_task": {
       "name": "Snooze task",
       "description": "Postpone a task to a specific date.",
       "fields": {
-        "snooze_until": {
-          "name": "Snooze until",
-          "description": "Date to postpone the task to."
-        }
+        "snooze_until": { "name": "Snooze until", "description": "Date to postpone to." }
       }
     },
     "reassign_task": {
       "name": "Reassign task",
-      "description": "Change the current assignee of a task.",
+      "description": "Change the current assignee.",
       "fields": {
-        "assignee": {
-          "name": "Assign to",
-          "description": "Person to assign the task to."
-        }
+        "assignee": { "name": "Assign to", "description": "Person to assign the task to." }
       }
     },
     "update_task": {
       "name": "Update task",
-      "description": "Update properties of an existing task.",
+      "description": "Update task properties.",
       "fields": {
-        "title": {
-          "name": "Title",
-          "description": "New name for the task."
-        },
-        "description": {
-          "name": "Description",
-          "description": "New description for the task."
-        },
-        "priority": {
-          "name": "Priority",
-          "description": "New priority level."
-        },
-        "icon": {
-          "name": "Icon",
-          "description": "New icon for the task."
-        },
-        "enabled": {
-          "name": "Enabled",
-          "description": "Enable or disable the task."
-        }
+        "title": { "name": "Title", "description": "New name." },
+        "description": { "name": "Description", "description": "New description." },
+        "priority": { "name": "Priority", "description": "New priority." },
+        "icon": { "name": "Icon", "description": "New icon." },
+        "enabled": { "name": "Enabled", "description": "Enable or disable." }
       }
     },
-    "remove_task": {
-      "name": "Remove task",
-      "description": "Delete a housework task."
-    },
+    "remove_task": { "name": "Remove task", "description": "Delete a task." },
     "add_label": {
       "name": "Add label",
-      "description": "Create a new label for categorizing tasks.",
+      "description": "Create a new label.",
       "fields": {
-        "name": {
-          "name": "Name",
-          "description": "Name of the label."
-        },
-        "color": {
-          "name": "Color",
-          "description": "Hex color for the label (e.g. #FF5733)."
-        },
-        "icon": {
-          "name": "Icon",
-          "description": "MDI icon for the label."
-        }
+        "name": { "name": "Name", "description": "Name of the label." },
+        "color": { "name": "Color", "description": "Hex color (e.g. #FF5733)." },
+        "icon": { "name": "Icon", "description": "MDI icon." }
       }
     },
     "update_label": {
       "name": "Update label",
-      "description": "Update properties of an existing label.",
+      "description": "Update a label.",
       "fields": {
-        "label_id": {
-          "name": "Label ID",
-          "description": "ID of the label to update."
-        },
-        "name": {
-          "name": "Name",
-          "description": "New name for the label."
-        },
-        "color": {
-          "name": "Color",
-          "description": "New color for the label."
-        },
-        "icon": {
-          "name": "Icon",
-          "description": "New icon for the label."
-        }
+        "label_id": { "name": "Label ID", "description": "ID of the label." },
+        "name": { "name": "Name", "description": "New name." },
+        "color": { "name": "Color", "description": "New color." },
+        "icon": { "name": "Icon", "description": "New icon." }
       }
     },
     "remove_label": {
       "name": "Remove label",
       "description": "Delete a label.",
       "fields": {
-        "label_id": {
-          "name": "Label ID",
-          "description": "ID of the label to delete."
-        }
+        "label_id": { "name": "Label ID", "description": "ID of the label." }
       }
     }
   },
   "entity": {
     "sensor": {
-      "tasks_due_today": {
-        "name": "Tasks due today"
-      },
-      "overdue_tasks": {
-        "name": "Overdue tasks"
-      }
+      "tasks_due_today": { "name": "Tasks due today" },
+      "overdue_tasks": { "name": "Overdue tasks" }
     },
     "calendar": {
-      "housework": {
-        "name": "Housework"
-      }
+      "housework": { "name": "Housework" }
     }
   },
   "exceptions": {
-    "no_target": {
-      "message": "No target entity specified."
-    }
+    "no_target": { "message": "No target entity specified." }
   }
 }

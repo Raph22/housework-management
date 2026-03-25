@@ -131,38 +131,39 @@ REMOVE_LABEL_SCHEMA = vol.Schema(
 )
 
 
-def _get_store_and_coordinator(hass: HomeAssistant):
-    """Get the store and coordinator from hass.data."""
-    for entry_data in hass.data.get(DOMAIN, {}).values():
-        if "store" in entry_data:
-            return entry_data["store"], entry_data["coordinator"]
-    return None, None
-
-
-def _get_entry_options(hass: HomeAssistant) -> dict:
-    """Get the config entry options."""
+def _get_entry_and_data(hass: HomeAssistant):
+    """Get the config entry, store, and coordinator."""
     for entry_id, entry_data in hass.data.get(DOMAIN, {}).items():
         if "store" in entry_data:
             entries = hass.config_entries.async_entries(DOMAIN)
             for entry in entries:
                 if entry.entry_id == entry_id:
-                    return dict(entry.options)
-    return {}
+                    return entry, entry_data["store"], entry_data["coordinator"]
+    return None, None, None
 
 
 def _get_task_from_entity_id(hass: HomeAssistant, entity_id: str):
-    """Resolve an entity_id to a task via the entity registry."""
-    store, coordinator = _get_store_and_coordinator(hass)
-    if store is None:
-        return None, None, None
+    """Resolve an entity_id to a task via the coordinator."""
+    entry, store, coordinator = _get_entry_and_data(hass)
+    if coordinator is None or not coordinator.data:
+        return None, None, None, None
 
+    # Find the task ID from the entity's unique_id
     registry = er.async_get(hass)
-    entry = registry.async_get(entity_id)
-    if entry is None:
-        return None, None, None
+    entity_entry = registry.async_get(entity_id)
+    if entity_entry is None:
+        return None, None, None, None
 
-    task = store.get_task_by_entity_unique_id(entry.unique_id)
-    return task, store, coordinator
+    # unique_id is "housework_{subentry_id}"
+    unique_id = entity_entry.unique_id
+    prefix = "housework_"
+    if unique_id and unique_id.startswith(prefix):
+        task_id = unique_id[len(prefix):]
+        task = coordinator.data.get(task_id)
+        if task:
+            return task, store, coordinator, entry
+
+    return None, None, None, None
 
 
 def _resolve_entity_ids(call: ServiceCall) -> list[str]:
@@ -184,44 +185,50 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         return
 
     async def handle_add_task(call: ServiceCall) -> None:
-        """Handle the add_task service call."""
-        store, coordinator = _get_store_and_coordinator(hass)
-        if store is None:
-            _LOGGER.error("Housework store not found")
+        """Handle the add_task service call — creates a config subentry."""
+        entry, store, coordinator = _get_entry_and_data(hass)
+        if entry is None:
+            _LOGGER.error("Housework config entry not found")
             return
 
-        data = call.data
-        options = _get_entry_options(hass)
+        data = dict(call.data)
+        options = dict(entry.options)
 
-        task = Task(
-            title=data["title"],
-            description=data.get("description", ""),
-            priority=data.get("priority", options.get("default_priority", 3)),
-            frequency_type=data["frequency_type"],
-            frequency_value=data.get("frequency_value", 1),
-            frequency_days_of_week=data.get("frequency_days_of_week", []),
-            frequency_day_of_month=data.get("frequency_day_of_month"),
-            scheduling_mode=data.get("scheduling_mode", "rolling"),
-            assignees=data.get("assignees", []),
-            assignment_strategy=data.get(
+        # Apply option defaults
+        if "priority" not in call.data or call.data["priority"] == 3:
+            data.setdefault("priority", options.get("default_priority", 3))
+        if "assignment_strategy" not in call.data:
+            data.setdefault(
                 "assignment_strategy",
                 options.get("default_assignment_strategy", "round_robin"),
-            ),
-            icon=data.get("icon", "mdi:broom"),
-        )
+            )
 
+        title = data["title"]
+
+        # Calculate initial due date
+        task = Task.from_subentry("temp", data)
         if data.get("next_due"):
-            task.next_due = data["next_due"]
+            initial_due = data["next_due"]
         else:
-            initial_due = calculate_initial_due(task)
-            task.next_due = initial_due.isoformat()
+            initial_due = calculate_initial_due(task).isoformat()
 
-        if task.assignees:
-            task.current_assignee = task.assignees[0]
+        # Create the subentry
+        subentry = {
+            "subentry_type": "task",
+            "title": title,
+            "data": data,
+            "unique_id": None,
+        }
+        result = hass.config_entries.async_add_subentry(entry, subentry)
 
-        await store.async_add_task(task)
+        # Initialize runtime state
+        runtime = {"next_due": initial_due, "created_at": datetime.now(timezone.utc).isoformat()}
+        if data.get("assignees"):
+            runtime["current_assignee"] = data["assignees"][0]
+        await store.async_update_runtime_state(result.subentry_id, runtime)
+
         await coordinator.async_request_refresh()
-        _LOGGER.info("Added task: %s", task.title)
+        _LOGGER.info("Added task: %s", title)
 
     async def handle_complete_task(call: ServiceCall) -> None:
         """Handle the complete_task service call."""
@@ -232,7 +239,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     async def _complete_single_task(
         hass: HomeAssistant, call: ServiceCall, entity_id: str
     ) -> None:
-        task, store, coordinator = _get_task_from_entity_id(hass, entity_id)
+        task, store, coordinator, entry = _get_task_from_entity_id(hass, entity_id)
         if task is None:
             _LOGGER.error("Task not found for entity: %s", entity_id)
             return
@@ -240,10 +247,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         completed_by = call.data.get("completed_by", task.current_assignee or "")
         completed_at = call.data.get("completed_at")
         if completed_at:
-            if isinstance(completed_at, str):
-                completed_at_str = completed_at
-            else:
-                completed_at_str = completed_at.isoformat()
+            completed_at_str = completed_at if isinstance(completed_at, str) else completed_at.isoformat()
         else:
             completed_at_str = datetime.now(timezone.utc).isoformat()
 
@@ -255,16 +259,15 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         )
         await store.async_add_history(record)
 
-        updates: dict = {"last_completed": completed_at_str}
-
         # Calculate next due using override (don't mutate task)
+        runtime_updates: dict = {"last_completed": completed_at_str}
         if task.frequency_type != FrequencyType.ONCE:
             next_due = calculate_next_due(
                 task, last_completed_override=completed_at_str
             )
-            updates["next_due"] = next_due.isoformat() if next_due else None
+            runtime_updates["next_due"] = next_due.isoformat() if next_due else None
         else:
-            updates["next_due"] = None
+            runtime_updates["next_due"] = None
 
         # Update assignment
         current_assignee = task.current_assignee
@@ -273,9 +276,9 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             state = update_assignment_state(state, completed_by)
             current_assignee = determine_next_assignee(task, state)
             await store.async_update_assignment_state(task.id, state)
-        updates["current_assignee"] = current_assignee
+        runtime_updates["current_assignee"] = current_assignee
 
-        await store.async_update_task(task.id, updates)
+        await store.async_update_runtime_state(task.id, runtime_updates)
         await coordinator.async_request_refresh()
 
         hass.bus.async_fire(
@@ -284,10 +287,9 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 "task_id": task.id,
                 "title": task.title,
                 "completed_by": completed_by,
-                "next_due": updates["next_due"],
+                "next_due": runtime_updates["next_due"],
             },
         )
-
         _LOGGER.info("Completed task: %s by %s", task.title, completed_by)
 
     async def handle_skip_task(call: ServiceCall) -> None:
@@ -296,10 +298,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         for entity_id in entity_ids:
             await _skip_single_task(hass, entity_id)
 
-    async def _skip_single_task(
-        hass: HomeAssistant, entity_id: str
-    ) -> None:
-        task, store, coordinator = _get_task_from_entity_id(hass, entity_id)
+    async def _skip_single_task(hass: HomeAssistant, entity_id: str) -> None:
+        task, store, coordinator, entry = _get_task_from_entity_id(hass, entity_id)
         if task is None:
             _LOGGER.error("Task not found for entity: %s", entity_id)
             return
@@ -314,18 +314,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         next_due = calculate_next_due_after_skip(task)
         next_due_str = next_due.isoformat() if next_due else None
 
-        await store.async_update_task(task.id, {"next_due": next_due_str})
+        await store.async_update_runtime_state(task.id, {"next_due": next_due_str})
         await coordinator.async_request_refresh()
 
         hass.bus.async_fire(
             "housework_task_skipped",
-            {
-                "task_id": task.id,
-                "title": task.title,
-                "next_due": next_due_str,
-            },
+            {"task_id": task.id, "title": task.title, "next_due": next_due_str},
         )
-
         _LOGGER.info("Skipped task: %s", task.title)
 
     async def handle_snooze_task(call: ServiceCall) -> None:
@@ -338,7 +333,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     async def _snooze_single_task(
         hass: HomeAssistant, entity_id: str, snooze_until: str
     ) -> None:
-        task, store, coordinator = _get_task_from_entity_id(hass, entity_id)
+        task, store, coordinator, entry = _get_task_from_entity_id(hass, entity_id)
         if task is None:
             _LOGGER.error("Task not found for entity: %s", entity_id)
             return
@@ -354,18 +349,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         )
         await store.async_add_history(record)
 
-        await store.async_update_task(task.id, {"next_due": snooze_until})
+        await store.async_update_runtime_state(task.id, {"next_due": snooze_until})
         await coordinator.async_request_refresh()
 
         hass.bus.async_fire(
             "housework_task_snoozed",
-            {
-                "task_id": task.id,
-                "title": task.title,
-                "snooze_until": snooze_until,
-            },
+            {"task_id": task.id, "title": task.title, "snooze_until": snooze_until},
         )
-
         _LOGGER.info("Snoozed task: %s until %s", task.title, snooze_until)
 
     async def handle_reassign_task(call: ServiceCall) -> None:
@@ -378,12 +368,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     async def _reassign_single_task(
         hass: HomeAssistant, entity_id: str, assignee: str
     ) -> None:
-        task, store, coordinator = _get_task_from_entity_id(hass, entity_id)
+        task, store, coordinator, entry = _get_task_from_entity_id(hass, entity_id)
         if task is None:
             _LOGGER.error("Task not found for entity: %s", entity_id)
             return
 
-        await store.async_update_task(task.id, {"current_assignee": assignee})
+        await store.async_update_runtime_state(task.id, {"current_assignee": assignee})
         await coordinator.async_request_refresh()
         _LOGGER.info("Reassigned task: %s to %s", task.title, assignee)
 
@@ -396,20 +386,30 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     async def _update_single_task(
         hass: HomeAssistant, call: ServiceCall, entity_id: str
     ) -> None:
-        task, store, coordinator = _get_task_from_entity_id(hass, entity_id)
-        if task is None:
+        task, store, coordinator, entry = _get_task_from_entity_id(hass, entity_id)
+        if task is None or entry is None:
             _LOGGER.error("Task not found for entity: %s", entity_id)
             return
 
-        updates = {}
-        for key in ("title", "description", "icon", "enabled", "priority"):
-            if key in call.data:
-                updates[key] = call.data[key]
+        # Find the subentry and update it
+        subentry = entry.subentries.get(task.id)
+        if subentry is None:
+            _LOGGER.error("Subentry not found for task: %s", task.id)
+            return
 
-        if updates:
-            await store.async_update_task(task.id, updates)
-            await coordinator.async_request_refresh()
-            _LOGGER.info("Updated task: %s", task.title)
+        new_data = dict(subentry.data)
+        new_title = subentry.title
+        for key in ("title", "description", "icon", "priority"):
+            if key in call.data:
+                new_data[key] = call.data[key]
+                if key == "title":
+                    new_title = call.data[key]
+
+        hass.config_entries.async_update_subentry(
+            entry, subentry, data=new_data, title=new_title
+        )
+        await coordinator.async_request_refresh()
+        _LOGGER.info("Updated task: %s", new_title)
 
     async def handle_remove_task(call: ServiceCall) -> None:
         """Handle the remove_task service call."""
@@ -418,19 +418,22 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             await _remove_single_task(hass, entity_id)
 
     async def _remove_single_task(hass: HomeAssistant, entity_id: str) -> None:
-        task, store, coordinator = _get_task_from_entity_id(hass, entity_id)
-        if task is None:
+        task, store, coordinator, entry = _get_task_from_entity_id(hass, entity_id)
+        if task is None or entry is None:
             _LOGGER.error("Task not found for entity: %s", entity_id)
             return
 
         title = task.title
-        await store.async_remove_task(task.id)
+        # Remove runtime state
+        await store.async_remove_runtime_state(task.id)
+        # Remove subentry (cascades entity cleanup)
+        hass.config_entries.async_remove_subentry(entry, task.id)
         await coordinator.async_request_refresh()
         _LOGGER.info("Removed task: %s", title)
 
     async def handle_add_label(call: ServiceCall) -> None:
         """Handle the add_label service call."""
-        store, coordinator = _get_store_and_coordinator(hass)
+        entry, store, coordinator = _get_entry_and_data(hass)
         if store is None:
             _LOGGER.error("Housework store not found")
             return
@@ -445,7 +448,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
     async def handle_update_label(call: ServiceCall) -> None:
         """Handle the update_label service call."""
-        store, coordinator = _get_store_and_coordinator(hass)
+        entry, store, coordinator = _get_entry_and_data(hass)
         if store is None:
             _LOGGER.error("Housework store not found")
             return
@@ -465,7 +468,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
     async def handle_remove_label(call: ServiceCall) -> None:
         """Handle the remove_label service call."""
-        store, coordinator = _get_store_and_coordinator(hass)
+        entry, store, coordinator = _get_entry_and_data(hass)
         if store is None:
             _LOGGER.error("Housework store not found")
             return

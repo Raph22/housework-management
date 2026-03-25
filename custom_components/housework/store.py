@@ -1,4 +1,11 @@
-"""Storage layer for the Housework integration."""
+"""Storage layer for the Housework integration (runtime state only).
+
+Task definitions are stored in config subentries. This store holds:
+- Runtime state per task (last_completed, next_due, current_assignee)
+- Completion history
+- Labels
+- Assignment state (rotation tracking)
+"""
 
 from __future__ import annotations
 
@@ -8,21 +15,21 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
-from .const import MAX_HISTORY_RECORDS, STORAGE_KEY, STORAGE_VERSION, TASK_MUTABLE_FIELDS
-from .models import CompletionRecord, Label, Task
+from .const import MAX_HISTORY_RECORDS, STORAGE_KEY, STORAGE_VERSION
+from .models import CompletionRecord, Label
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class HouseworkStore:
-    """Manage persistent storage for housework tasks."""
+    """Manage persistent runtime state for housework tasks."""
 
     def __init__(self, hass: HomeAssistant) -> None:
         """Initialize the store."""
         self._store = Store[dict[str, Any]](
             hass, STORAGE_VERSION, STORAGE_KEY
         )
-        self._tasks: dict[str, Task] = {}
+        self._runtime_state: dict[str, dict[str, Any]] = {}
         self._history: list[CompletionRecord] = []
         self._labels: dict[str, Label] = {}
         self._assignment_state: dict[str, dict] = {}
@@ -33,9 +40,17 @@ class HouseworkStore:
         if data is None:
             return
 
-        for task_data in data.get("tasks", {}).values():
-            task = Task.from_dict(task_data)
-            self._tasks[task.id] = task
+        self._runtime_state = data.get("runtime_state", {})
+
+        # Migration: load legacy task data as runtime state
+        for task_id, task_data in data.get("tasks", {}).items():
+            if task_id not in self._runtime_state:
+                self._runtime_state[task_id] = {
+                    "last_completed": task_data.get("last_completed"),
+                    "next_due": task_data.get("next_due"),
+                    "current_assignee": task_data.get("current_assignee"),
+                    "created_at": task_data.get("created_at"),
+                }
 
         for record_data in data.get("history", []):
             self._history.append(CompletionRecord.from_dict(record_data))
@@ -53,59 +68,36 @@ class HouseworkStore:
     async def _async_save(self) -> None:
         """Save data to storage."""
         data = {
-            "tasks": {tid: t.to_dict() for tid, t in self._tasks.items()},
+            "runtime_state": self._runtime_state,
             "history": [r.to_dict() for r in self._history],
             "labels": {lid: label.to_dict() for lid, label in self._labels.items()},
             "assignment_state": self._assignment_state,
         }
         await self._store.async_save(data)
 
-    # --- Tasks ---
+    # --- Runtime State (per task, keyed by subentry_id) ---
 
-    def get_all_tasks(self) -> dict[str, Task]:
-        """Return all tasks."""
-        return dict(self._tasks)
+    def get_runtime_state(self, task_id: str) -> dict[str, Any]:
+        """Return runtime state for a task."""
+        return dict(self._runtime_state.get(task_id, {}))
 
-    def get_task(self, task_id: str) -> Task | None:
-        """Return a task by ID."""
-        return self._tasks.get(task_id)
+    def get_all_runtime_state(self) -> dict[str, dict[str, Any]]:
+        """Return runtime state for all tasks."""
+        return dict(self._runtime_state)
 
-    def get_task_by_entity_unique_id(self, unique_id: str) -> Task | None:
-        """Return a task by its entity unique_id (housework_{task_id})."""
-        prefix = "housework_"
-        if unique_id.startswith(prefix):
-            task_id = unique_id[len(prefix):]
-            return self._tasks.get(task_id)
-        return None
-
-    async def async_add_task(self, task: Task) -> Task:
-        """Add a new task."""
-        self._tasks[task.id] = task
+    async def async_update_runtime_state(
+        self, task_id: str, updates: dict[str, Any]
+    ) -> None:
+        """Update runtime state for a task."""
+        state = self._runtime_state.setdefault(task_id, {})
+        state.update(updates)
         await self._async_save()
-        return task
 
-    async def async_update_task(self, task_id: str, updates: dict) -> Task | None:
-        """Update a task with partial data.
-
-        Only fields in TASK_MUTABLE_FIELDS are allowed.
-        """
-        task = self._tasks.get(task_id)
-        if task is None:
-            return None
-        for key, value in updates.items():
-            if key in TASK_MUTABLE_FIELDS:
-                setattr(task, key, value)
-        await self._async_save()
-        return task
-
-    async def async_remove_task(self, task_id: str) -> bool:
-        """Remove a task."""
-        if task_id not in self._tasks:
-            return False
-        del self._tasks[task_id]
+    async def async_remove_runtime_state(self, task_id: str) -> None:
+        """Remove runtime state for a deleted task."""
+        self._runtime_state.pop(task_id, None)
         self._assignment_state.pop(task_id, None)
         await self._async_save()
-        return True
 
     # --- History ---
 

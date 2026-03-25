@@ -12,7 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
-from .coordinator import HouseworkCoordinator
+from .coordinator import HouseworkCoordinator, SUBENTRY_TYPE_TASK
 from .models import Task
 from .scheduling import format_frequency
 
@@ -36,7 +36,7 @@ async def async_setup_entry(
         new_entities = []
         if coordinator.data:
             for task_id, task in coordinator.data.items():
-                if task_id not in known_task_ids and task.enabled:
+                if task_id not in known_task_ids:
                     known_task_ids.add(task_id)
                     new_entities.append(
                         HouseworkTaskSensor(coordinator, task, entry)
@@ -45,15 +45,22 @@ async def async_setup_entry(
         if new_entities:
             async_add_entities(new_entities)
 
-    # Add entities for existing tasks
+    # Add entities for existing task subentries
     entities = []
-    if coordinator.data:
-        for task in coordinator.data.values():
-            if task.enabled:
-                known_task_ids.add(task.id)
-                entities.append(
-                    HouseworkTaskSensor(coordinator, task, entry)
+    for subentry in entry.subentries.values():
+        if subentry.subentry_type != SUBENTRY_TYPE_TASK:
+            continue
+        task_id = subentry.subentry_id
+        if coordinator.data and task_id in coordinator.data:
+            known_task_ids.add(task_id)
+            entities.append(
+                HouseworkTaskSensor(
+                    coordinator,
+                    coordinator.data[task_id],
+                    entry,
+                    subentry_id=task_id,
                 )
+            )
 
     async_add_entities(entities)
 
@@ -70,6 +77,7 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
         coordinator: HouseworkCoordinator,
         task: Task,
         entry: ConfigEntry,
+        subentry_id: str | None = None,
     ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, context=task.id)
@@ -129,7 +137,6 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
             except (ValueError, TypeError):
                 pass
 
-        # Resolve assignee friendly name
         assignee_name = None
         if task.current_assignee:
             state = self.hass.states.get(task.current_assignee)
@@ -138,7 +145,6 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
                     "friendly_name", task.current_assignee
                 )
 
-        # Resolve label names via coordinator's store
         label_names = []
         all_labels = self.coordinator.store.get_all_labels()
         for label_id in task.labels:

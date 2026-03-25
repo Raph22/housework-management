@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from typing import Any
 from uuid import uuid4
 
 from .const import (
@@ -12,10 +13,8 @@ from .const import (
     DEFAULT_ICON,
     DEFAULT_PRIORITY,
     DEFAULT_SCHEDULING_MODE,
-    AssignmentStrategy,
     CompletionAction,
     FrequencyType,
-    SchedulingMode,
 )
 
 
@@ -29,7 +28,7 @@ def _now_iso() -> str:
 
 @dataclass
 class Task:
-    """A housework task."""
+    """A housework task (merged from subentry config + runtime state)."""
 
     id: str = field(default_factory=_new_id)
     title: str = ""
@@ -48,7 +47,7 @@ class Task:
     assignment_strategy: str = DEFAULT_ASSIGNMENT_STRATEGY
     current_assignee: str | None = None
 
-    # State
+    # State (runtime, stored in HouseworkStore)
     last_completed: str | None = None
     next_due: str | None = None
     created_at: str = field(default_factory=_now_iso)
@@ -57,6 +56,42 @@ class Task:
     labels: list[str] = field(default_factory=list)
     icon: str = DEFAULT_ICON
     enabled: bool = True
+
+    @classmethod
+    def from_subentry(
+        cls,
+        subentry_id: str,
+        subentry_data: dict[str, Any],
+        runtime_state: dict[str, Any] | None = None,
+    ) -> Task:
+        """Create a Task from a config subentry + optional runtime state."""
+        state = runtime_state or {}
+        days_of_week = subentry_data.get("frequency_days_of_week", [])
+        if isinstance(days_of_week, list):
+            days_of_week = [int(d) for d in days_of_week]
+
+        return cls(
+            id=subentry_id,
+            title=subentry_data.get("title", ""),
+            description=subentry_data.get("description", ""),
+            priority=int(subentry_data.get("priority", DEFAULT_PRIORITY)),
+            frequency_type=subentry_data.get("frequency_type", FrequencyType.WEEKLY),
+            frequency_value=int(subentry_data.get("frequency_value", DEFAULT_FREQUENCY_VALUE)),
+            frequency_days_of_week=days_of_week,
+            frequency_day_of_month=subentry_data.get("frequency_day_of_month"),
+            scheduling_mode=subentry_data.get("scheduling_mode", DEFAULT_SCHEDULING_MODE),
+            assignees=subentry_data.get("assignees", []),
+            assignment_strategy=subentry_data.get(
+                "assignment_strategy", DEFAULT_ASSIGNMENT_STRATEGY
+            ),
+            current_assignee=state.get("current_assignee"),
+            last_completed=state.get("last_completed"),
+            next_due=state.get("next_due"),
+            created_at=state.get("created_at", _now_iso()),
+            labels=subentry_data.get("labels", []),
+            icon=subentry_data.get("icon", DEFAULT_ICON),
+            enabled=True,
+        )
 
     def to_dict(self) -> dict:
         """Convert to dictionary for storage."""
@@ -83,7 +118,7 @@ class Task:
 
     @classmethod
     def from_dict(cls, data: dict) -> Task:
-        """Create from dictionary."""
+        """Create from dictionary (legacy storage format)."""
         return cls(
             id=data["id"],
             title=data["title"],

@@ -21,6 +21,65 @@
       }
     }
   },
+  "config_subentries": {
+    "task": {
+      "title": "Tâche ménagère",
+      "entry_type": "Tâche",
+      "initiate_flow": {
+        "user": "Ajouter une tâche",
+        "reconfigure": "Modifier la tâche"
+      },
+      "step": {
+        "user": {
+          "title": "Ajouter une nouvelle tâche",
+          "data": {
+            "title": "Nom de la tâche",
+            "frequency_type": "Fréquence",
+            "frequency_value": "Tous les N périodes",
+            "frequency_days_of_week": "Jours de la semaine",
+            "frequency_day_of_month": "Jour du mois",
+            "scheduling_mode": "Mode de planification",
+            "priority": "Priorité",
+            "assignees": "Responsables",
+            "assignment_strategy": "Stratégie d'attribution",
+            "description": "Description",
+            "icon": "Icône"
+          },
+          "data_description": {
+            "frequency_value": "Nombre de jours/semaines/mois entre chaque occurrence.",
+            "frequency_days_of_week": "Uniquement pour la fréquence 'Jours spécifiques'.",
+            "frequency_day_of_month": "Uniquement pour la fréquence 'Mensuel' (1-31).",
+            "scheduling_mode": "Glissant s'adapte à la date de réalisation. Fixe conserve la cadence d'origine."
+          }
+        },
+        "reconfigure": {
+          "title": "Modifier la tâche",
+          "data": {
+            "title": "Nom de la tâche",
+            "frequency_type": "Fréquence",
+            "frequency_value": "Tous les N périodes",
+            "frequency_days_of_week": "Jours de la semaine",
+            "frequency_day_of_month": "Jour du mois",
+            "scheduling_mode": "Mode de planification",
+            "priority": "Priorité",
+            "assignees": "Responsables",
+            "assignment_strategy": "Stratégie d'attribution",
+            "description": "Description",
+            "icon": "Icône"
+          },
+          "data_description": {
+            "frequency_value": "Nombre de jours/semaines/mois entre chaque occurrence.",
+            "frequency_days_of_week": "Uniquement pour la fréquence 'Jours spécifiques'.",
+            "frequency_day_of_month": "Uniquement pour la fréquence 'Mensuel' (1-31).",
+            "scheduling_mode": "Glissant s'adapte à la date de réalisation. Fixe conserve la cadence d'origine."
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Tâche mise à jour avec succès."
+      }
+    }
+  },
   "selector": {
     "assignment_strategy": {
       "options": {
@@ -48,6 +107,21 @@
         "5": "Samedi",
         "6": "Dimanche"
       }
+    },
+    "frequency_type": {
+      "options": {
+        "daily": "Quotidien",
+        "weekly": "Hebdomadaire",
+        "monthly": "Mensuel",
+        "day_of_week": "Jours spécifiques de la semaine",
+        "once": "Une fois"
+      }
+    },
+    "scheduling_mode": {
+      "options": {
+        "rolling": "Glissant",
+        "fixed": "Fixe"
+      }
     }
   },
   "services": {
@@ -55,193 +129,92 @@
       "name": "Ajouter une tâche",
       "description": "Créer une nouvelle tâche ménagère.",
       "fields": {
-        "title": {
-          "name": "Titre",
-          "description": "Nom de la tâche."
-        },
-        "frequency_type": {
-          "name": "Type de fréquence",
-          "description": "À quelle fréquence la tâche se répète."
-        },
-        "frequency_value": {
-          "name": "Valeur de fréquence",
-          "description": "Intervalle de répétition (ex. : tous les N jours/semaines/mois). Par défaut : 1."
-        },
-        "frequency_days_of_week": {
-          "name": "Jours de la semaine",
-          "description": "Jours de la semaine (0=Lun, 6=Dim). Uniquement pour le type 'jours de la semaine'."
-        },
-        "frequency_day_of_month": {
-          "name": "Jour du mois",
-          "description": "Jour du mois (1-31). Uniquement pour le type 'mensuel'."
-        },
-        "scheduling_mode": {
-          "name": "Mode de planification",
-          "description": "'Glissant' calcule depuis la dernière réalisation, 'Fixe' conserve la cadence d'origine."
-        },
-        "priority": {
-          "name": "Priorité",
-          "description": "Niveau de priorité (1=urgent, 4=basse). Par défaut : 3."
-        },
-        "description": {
-          "name": "Description",
-          "description": "Détails optionnels sur la tâche."
-        },
-        "assignees": {
-          "name": "Responsables",
-          "description": "Personnes à qui attribuer cette tâche."
-        },
-        "assignment_strategy": {
-          "name": "Stratégie d'attribution",
-          "description": "Comment alterner les responsables."
-        },
-        "icon": {
-          "name": "Icône",
-          "description": "Icône MDI pour la tâche."
-        },
-        "next_due": {
-          "name": "Première échéance",
-          "description": "Date de la première échéance. Par défaut : aujourd'hui."
-        }
+        "title": { "name": "Titre", "description": "Nom de la tâche." },
+        "frequency_type": { "name": "Type de fréquence", "description": "À quelle fréquence la tâche se répète." },
+        "frequency_value": { "name": "Valeur de fréquence", "description": "Intervalle de répétition (tous les N jours/semaines/mois)." },
+        "frequency_days_of_week": { "name": "Jours de la semaine", "description": "Jours de la semaine (0=Lun, 6=Dim)." },
+        "frequency_day_of_month": { "name": "Jour du mois", "description": "Jour du mois (1-31)." },
+        "scheduling_mode": { "name": "Mode de planification", "description": "Glissant ou Fixe." },
+        "priority": { "name": "Priorité", "description": "Niveau de priorité (1=urgent, 4=basse)." },
+        "description": { "name": "Description", "description": "Détails optionnels." },
+        "assignees": { "name": "Responsables", "description": "Personnes à qui attribuer." },
+        "assignment_strategy": { "name": "Stratégie d'attribution", "description": "Comment alterner les responsables." },
+        "icon": { "name": "Icône", "description": "Icône MDI pour la tâche." },
+        "next_due": { "name": "Première échéance", "description": "Date de la première échéance." }
       }
     },
     "complete_task": {
       "name": "Terminer une tâche",
-      "description": "Marquer une tâche ménagère comme terminée.",
+      "description": "Marquer une tâche comme terminée.",
       "fields": {
-        "completed_by": {
-          "name": "Terminée par",
-          "description": "Personne ayant terminé la tâche. Par défaut : le responsable actuel."
-        },
-        "completed_at": {
-          "name": "Terminée le",
-          "description": "Date et heure de réalisation. Par défaut : maintenant."
-        }
+        "completed_by": { "name": "Terminée par", "description": "Personne ayant terminé la tâche." },
+        "completed_at": { "name": "Terminée le", "description": "Date et heure de réalisation." }
       }
     },
-    "skip_task": {
-      "name": "Passer une tâche",
-      "description": "Passer l'occurrence actuelle d'une tâche sans la réaliser."
-    },
+    "skip_task": { "name": "Passer une tâche", "description": "Passer l'occurrence actuelle." },
     "snooze_task": {
       "name": "Reporter une tâche",
       "description": "Reporter une tâche à une date ultérieure.",
       "fields": {
-        "snooze_until": {
-          "name": "Reporter jusqu'au",
-          "description": "Date à laquelle reporter la tâche."
-        }
+        "snooze_until": { "name": "Reporter jusqu'au", "description": "Date de report." }
       }
     },
     "reassign_task": {
       "name": "Réattribuer une tâche",
-      "description": "Changer le responsable actuel d'une tâche.",
+      "description": "Changer le responsable actuel.",
       "fields": {
-        "assignee": {
-          "name": "Attribuer à",
-          "description": "Personne à qui attribuer la tâche."
-        }
+        "assignee": { "name": "Attribuer à", "description": "Personne à qui attribuer." }
       }
     },
     "update_task": {
       "name": "Modifier une tâche",
-      "description": "Modifier les propriétés d'une tâche existante.",
+      "description": "Modifier les propriétés d'une tâche.",
       "fields": {
-        "title": {
-          "name": "Titre",
-          "description": "Nouveau nom de la tâche."
-        },
-        "description": {
-          "name": "Description",
-          "description": "Nouvelle description de la tâche."
-        },
-        "priority": {
-          "name": "Priorité",
-          "description": "Nouveau niveau de priorité."
-        },
-        "icon": {
-          "name": "Icône",
-          "description": "Nouvelle icône pour la tâche."
-        },
-        "enabled": {
-          "name": "Activée",
-          "description": "Activer ou désactiver la tâche."
-        }
+        "title": { "name": "Titre", "description": "Nouveau nom." },
+        "description": { "name": "Description", "description": "Nouvelle description." },
+        "priority": { "name": "Priorité", "description": "Nouveau niveau." },
+        "icon": { "name": "Icône", "description": "Nouvelle icône." },
+        "enabled": { "name": "Activée", "description": "Activer ou désactiver." }
       }
     },
-    "remove_task": {
-      "name": "Supprimer une tâche",
-      "description": "Supprimer une tâche ménagère."
-    },
+    "remove_task": { "name": "Supprimer une tâche", "description": "Supprimer une tâche." },
     "add_label": {
       "name": "Ajouter un label",
-      "description": "Créer un nouveau label pour catégoriser les tâches.",
+      "description": "Créer un nouveau label.",
       "fields": {
-        "name": {
-          "name": "Nom",
-          "description": "Nom du label."
-        },
-        "color": {
-          "name": "Couleur",
-          "description": "Couleur hexadécimale du label (ex. #FF5733)."
-        },
-        "icon": {
-          "name": "Icône",
-          "description": "Icône MDI pour le label."
-        }
+        "name": { "name": "Nom", "description": "Nom du label." },
+        "color": { "name": "Couleur", "description": "Couleur hexadécimale (ex. #FF5733)." },
+        "icon": { "name": "Icône", "description": "Icône MDI." }
       }
     },
     "update_label": {
       "name": "Modifier un label",
-      "description": "Modifier les propriétés d'un label existant.",
+      "description": "Modifier un label.",
       "fields": {
-        "label_id": {
-          "name": "ID du label",
-          "description": "Identifiant du label à modifier."
-        },
-        "name": {
-          "name": "Nom",
-          "description": "Nouveau nom du label."
-        },
-        "color": {
-          "name": "Couleur",
-          "description": "Nouvelle couleur du label."
-        },
-        "icon": {
-          "name": "Icône",
-          "description": "Nouvelle icône du label."
-        }
+        "label_id": { "name": "ID du label", "description": "Identifiant du label." },
+        "name": { "name": "Nom", "description": "Nouveau nom." },
+        "color": { "name": "Couleur", "description": "Nouvelle couleur." },
+        "icon": { "name": "Icône", "description": "Nouvelle icône." }
       }
     },
     "remove_label": {
       "name": "Supprimer un label",
       "description": "Supprimer un label.",
       "fields": {
-        "label_id": {
-          "name": "ID du label",
-          "description": "Identifiant du label à supprimer."
-        }
+        "label_id": { "name": "ID du label", "description": "Identifiant du label." }
       }
     }
   },
   "entity": {
     "sensor": {
-      "tasks_due_today": {
-        "name": "Tâches du jour"
-      },
-      "overdue_tasks": {
-        "name": "Tâches en retard"
-      }
+      "tasks_due_today": { "name": "Tâches du jour" },
+      "overdue_tasks": { "name": "Tâches en retard" }
     },
     "calendar": {
-      "housework": {
-        "name": "Tâches ménagères"
-      }
+      "housework": { "name": "Tâches ménagères" }
     }
   },
   "exceptions": {
-    "no_target": {
-      "message": "Aucune entité cible spécifiée."
-    }
+    "no_target": { "message": "Aucune entité cible spécifiée." }
   }
 }

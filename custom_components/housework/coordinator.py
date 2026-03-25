@@ -17,9 +17,11 @@ _LOGGER = logging.getLogger(__name__)
 
 UPDATE_INTERVAL = timedelta(minutes=15)
 
+SUBENTRY_TYPE_TASK = "task"
+
 
 class HouseworkCoordinator(DataUpdateCoordinator[dict[str, Task]]):
-    """Coordinator that keeps task state in sync across all entities."""
+    """Coordinator that merges subentry config + runtime state into Task objects."""
 
     config_entry: ConfigEntry
 
@@ -40,5 +42,20 @@ class HouseworkCoordinator(DataUpdateCoordinator[dict[str, Task]]):
         self.store = store
 
     async def _async_update_data(self) -> dict[str, Task]:
-        """Fetch current task data from the store."""
-        return self.store.get_all_tasks()
+        """Build Task objects from subentries + runtime state."""
+        tasks: dict[str, Task] = {}
+        all_runtime = self.store.get_all_runtime_state()
+
+        for subentry in self.config_entry.subentries.values():
+            if subentry.subentry_type != SUBENTRY_TYPE_TASK:
+                continue
+
+            runtime = all_runtime.get(subentry.subentry_id, {})
+            task = Task.from_subentry(
+                subentry_id=subentry.subentry_id,
+                subentry_data=dict(subentry.data),
+                runtime_state=runtime,
+            )
+            tasks[subentry.subentry_id] = task
+
+        return tasks
