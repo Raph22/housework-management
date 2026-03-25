@@ -216,7 +216,10 @@ def format_frequency(task: Task) -> str:
         day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
         days = [day_names[d] for d in sorted(task.frequency_days_of_week) if 0 <= d <= 6]
         if days:
-            return f"Every {', '.join(days)}"
+            days_str = ", ".join(days)
+            if value > 1:
+                return f"Every {days_str} (every {value} weeks)"
+            return f"Every {days_str}"
         return "Weekly"
 
     return "Unknown"

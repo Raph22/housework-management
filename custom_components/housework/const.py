@@ -50,6 +50,14 @@ DEFAULT_FREQUENCY_VALUE = 1
 DEFAULT_SCHEDULING_MODE = SchedulingMode.ROLLING
 DEFAULT_ASSIGNMENT_STRATEGY = AssignmentStrategy.ROUND_ROBIN
 
+SCHEDULING_FIELDS = frozenset({
+    "frequency_type",
+    "frequency_value",
+    "frequency_days_of_week",
+    "frequency_day_of_month",
+    "scheduling_mode",
+})
+
 FREQUENCY_TYPES = [ft.value for ft in FrequencyType]
 ASSIGNMENT_STRATEGIES = [s.value for s in AssignmentStrategy]
 SCHEDULING_MODES = [m.value for m in SchedulingMode]

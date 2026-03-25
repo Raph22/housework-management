@@ -15,7 +15,7 @@ Assign tasks to household members, track completions, and automate reminders —
 - **Binary sensor per task** — turns on when due/overdue, works with any HA automation
 - **Calendar entity** — view all chores on the HA calendar
 - **Stats sensors** — "tasks due today" and "overdue tasks" counts for dashboard badges
-- **10 services** for full task and label management from automations and scripts
+- **11 services** for full task and label management from automations and scripts
 - **Events** fired on complete, skip, and snooze for automation triggers
 - **English and French** translations
 
@@ -38,7 +38,9 @@ Assign tasks to household members, track completions, and automate reminders —
 
 ### Creating tasks
 
-Use **Developer Tools > Services** or automations to create tasks:
+Create tasks from the UI: **Settings > Integrations > Housework > Add task**. This opens a form with all configuration options.
+
+You can also create tasks from automations or Developer Tools via services:
 
 ```yaml
 service: housework.add_task
@@ -89,6 +91,7 @@ data:
 | `housework.reassign_task` | Change the current assignee |
 | `housework.update_task` | Modify task properties (title, priority, icon, etc.) |
 | `housework.remove_task` | Delete a task |
+| `housework.reopen_task` | Set a new due date on a completed task |
 | `housework.add_label` | Create a label for categorizing tasks |
 | `housework.update_label` | Modify a label |
 | `housework.remove_label` | Delete a label |

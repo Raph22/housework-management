@@ -13,17 +13,18 @@ from homeassistant.helpers import entity_registry as er
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.service import async_extract_entity_ids
 
+from homeassistant.config_entries import ConfigSubentry
+
 from .assignment import determine_next_assignee, update_assignment_state
 from .const import (
     ASSIGNMENT_STRATEGIES,
     DOMAIN,
     FREQUENCY_TYPES,
+    SCHEDULING_FIELDS,
     SCHEDULING_MODES,
     CompletionAction,
     FrequencyType,
 )
-from homeassistant.config_entries import ConfigSubentry
-
 from .models import CompletionRecord, Label, Task
 from .scheduling import calculate_initial_due, calculate_next_due, calculate_next_due_after_skip
 
@@ -225,6 +226,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         runtime = {
             "next_due": initial_due,
             "created_at": datetime.now(timezone.utc).isoformat(),
+            "scheduling_signature": {k: data.get(k) for k in SCHEDULING_FIELDS},
         }
         if data.get("assignees"):
             runtime["current_assignee"] = data["assignees"][0]

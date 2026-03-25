@@ -8,7 +8,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.core import HomeAssistant, callback
 
-from .const import DOMAIN
+from .const import DOMAIN, SCHEDULING_FIELDS
 from .coordinator import HouseworkCoordinator
 from .models import Task
 from .scheduling import calculate_initial_due, calculate_next_due
@@ -18,15 +18,6 @@ from .store import HouseworkStore
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = ["binary_sensor", "calendar", "sensor"]
-
-# Fields that affect scheduling — changes to these require next_due recalculation
-_SCHEDULING_FIELDS = frozenset({
-    "frequency_type",
-    "frequency_value",
-    "frequency_days_of_week",
-    "frequency_day_of_month",
-    "scheduling_mode",
-})
 
 type HouseworkConfigEntry = ConfigEntry[HouseworkRuntimeData]
 
@@ -101,7 +92,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HouseworkConfigEntry) ->
 
 def _extract_scheduling_signature(data: dict) -> dict:
     """Extract scheduling-relevant fields from subentry data for comparison."""
-    return {k: data.get(k) for k in _SCHEDULING_FIELDS}
+    return {k: data.get(k) for k in SCHEDULING_FIELDS}
 
 
 async def _ensure_runtime_state(
