@@ -79,6 +79,9 @@
           }
         }
       },
+      "error": {
+        "days_of_week_required": "Sélectionnez au moins un jour de la semaine pour cette fréquence."
+      },
       "abort": {
         "reconfigure_successful": "Tâche mise à jour avec succès."
       }
@@ -240,6 +243,8 @@
     "no_target": { "message": "Aucune entité cible spécifiée." },
     "task_not_found": { "message": "Tâche introuvable pour l'entité spécifiée." },
     "integration_not_found": { "message": "Intégration Housework introuvable." },
-    "label_not_found": { "message": "Label introuvable." }
+    "label_not_found": { "message": "Label introuvable." },
+    "days_of_week_required": { "message": "Sélectionnez au moins un jour de la semaine pour cette fréquence." },
+    "assignee_not_allowed": { "message": "La personne sélectionnée n'est pas configurée pour cette tâche." }
   }
 }

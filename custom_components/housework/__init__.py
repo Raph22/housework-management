@@ -7,10 +7,11 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN
 from .coordinator import HouseworkCoordinator
-from .services import async_setup_services, async_unload_services
+from .services import async_setup_services
 from .store import HouseworkStore
 
 _LOGGER = logging.getLogger(__name__)
@@ -28,6 +29,12 @@ class HouseworkRuntimeData:
     coordinator: HouseworkCoordinator
 
 
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Set up the Housework integration."""
+    await async_setup_services(hass)
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: HouseworkConfigEntry) -> bool:
     """Set up Housework from a config entry."""
     store = HouseworkStore(hass)
@@ -41,7 +48,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: HouseworkConfigEntry) ->
     entry.runtime_data = HouseworkRuntimeData(store=store, coordinator=coordinator)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    await async_setup_services(hass)
 
     # Reload integration when options change
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
@@ -58,11 +64,7 @@ async def _async_options_updated(
 
 async def async_unload_entry(hass: HomeAssistant, entry: HouseworkConfigEntry) -> bool:
     """Unload a Housework config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if unload_ok:
-        await async_unload_services(hass)
-
-    return unload_ok
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: HouseworkConfigEntry) -> None:

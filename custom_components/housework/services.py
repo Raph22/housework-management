@@ -189,6 +189,18 @@ async def _async_resolve_entity_ids(
     return list(entity_ids)
 
 
+def _validate_day_of_week_frequency(data: dict) -> None:
+    """Reject day-of-week tasks without any selected weekdays."""
+    if (
+        data.get("frequency_type") == FrequencyType.DAY_OF_WEEK
+        and not data.get("frequency_days_of_week")
+    ):
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="days_of_week_required",
+        )
+
+
 async def async_setup_services(hass: HomeAssistant) -> None:
     """Set up Housework services."""
     if hass.services.has_service(DOMAIN, SERVICE_ADD_TASK):
@@ -214,6 +226,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             "assignment_strategy",
             options.get("default_assignment_strategy", "round_robin"),
         )
+        _validate_day_of_week_frequency(data)
 
         title = data["title"]
 
@@ -396,6 +409,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="task_not_found",
+            )
+
+        if assignee not in task.assignees:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="assignee_not_allowed",
             )
 
         await store.async_update_runtime_state(task.id, {"current_assignee": assignee})

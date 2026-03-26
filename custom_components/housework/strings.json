@@ -79,6 +79,9 @@
           }
         }
       },
+      "error": {
+        "days_of_week_required": "Select at least one weekday for this frequency."
+      },
       "abort": {
         "reconfigure_successful": "Task updated successfully."
       }
@@ -240,6 +243,8 @@
     "no_target": { "message": "No target entity specified." },
     "task_not_found": { "message": "Task not found for the specified entity." },
     "integration_not_found": { "message": "Housework integration not found." },
-    "label_not_found": { "message": "Label not found." }
+    "label_not_found": { "message": "Label not found." },
+    "days_of_week_required": { "message": "Select at least one weekday for this frequency." },
+    "assignee_not_allowed": { "message": "Selected assignee is not configured for this task." }
   }
 }

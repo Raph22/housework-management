@@ -34,6 +34,7 @@ from .const import (
     DEFAULT_ASSIGNMENT_STRATEGY,
     DEFAULT_PRIORITY,
     DOMAIN,
+    FrequencyType,
     FREQUENCY_TYPES,
     SCHEDULING_MODES,
 )
@@ -142,6 +143,16 @@ def _clean_task_data(user_input: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
+def _validate_task_data(data: dict[str, Any]) -> str | None:
+    """Validate task configuration after normalization."""
+    if (
+        data.get("frequency_type") == FrequencyType.DAY_OF_WEEK
+        and not data.get("frequency_days_of_week")
+    ):
+        return "days_of_week_required"
+    return None
+
+
 class HouseworkConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Housework."""
 
@@ -232,6 +243,12 @@ class TaskSubentryFlowHandler(ConfigSubentryFlow):
         """Handle adding a new task."""
         if user_input is not None:
             data = _clean_task_data(user_input)
+            if error := _validate_task_data(data):
+                return self.async_show_form(
+                    step_id="user",
+                    data_schema=_task_form_schema(defaults=data),
+                    errors={"base": error},
+                )
             return self.async_create_entry(
                 title=data["title"],
                 data=data,
@@ -250,6 +267,12 @@ class TaskSubentryFlowHandler(ConfigSubentryFlow):
 
         if user_input is not None:
             data = _clean_task_data(user_input)
+            if error := _validate_task_data(data):
+                return self.async_show_form(
+                    step_id="reconfigure",
+                    data_schema=_task_form_schema(defaults=data),
+                    errors={"base": error},
+                )
             return self.async_update_and_abort(
                 self._get_entry(),
                 subentry,
