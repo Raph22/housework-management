@@ -30,7 +30,7 @@ def _now_iso() -> str:
 class Task:
     """A housework task (merged from subentry config + runtime state)."""
 
-    id: str = field(default_factory=_new_id)
+    id: str = ""
     title: str = ""
     description: str = ""
     priority: int = DEFAULT_PRIORITY
@@ -50,7 +50,7 @@ class Task:
     # State (runtime, stored in HouseworkStore)
     last_completed: str | None = None
     next_due: str | None = None
-    created_at: str = field(default_factory=_now_iso)
+    created_at: str = ""
 
     # Metadata
     labels: list[str] = field(default_factory=list)

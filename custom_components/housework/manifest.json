@@ -3,11 +3,9 @@
   "name": "Housework",
   "codeowners": ["@Raph22"],
   "config_flow": true,
-  "dependencies": [],
   "documentation": "https://github.com/Raph22/housework-management",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/Raph22/housework-management/issues",
-  "requirements": [],
   "single_config_entry": true,
   "version": "0.2.0"
 }

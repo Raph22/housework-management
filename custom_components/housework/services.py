@@ -47,14 +47,14 @@ ADD_TASK_SCHEMA = vol.Schema(
     {
         vol.Required("title"): cv.string,
         vol.Required("frequency_type"): vol.In(FREQUENCY_TYPES),
-        vol.Optional("frequency_value", default=1): vol.Coerce(int),
+        vol.Optional("frequency_value"): vol.Coerce(int),
         vol.Optional("frequency_days_of_week"): vol.All(
             cv.ensure_list, [vol.All(vol.Coerce(int), vol.Range(min=0, max=6))]
         ),
         vol.Optional("frequency_day_of_month"): vol.All(
             vol.Coerce(int), vol.Range(min=1, max=31)
         ),
-        vol.Optional("scheduling_mode", default="rolling"): vol.In(SCHEDULING_MODES),
+        vol.Optional("scheduling_mode"): vol.In(SCHEDULING_MODES),
         vol.Optional("priority"): vol.All(
             vol.Coerce(int), vol.Range(min=1, max=4)
         ),
@@ -206,7 +206,9 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         data = dict(call.data)
         options = dict(entry.options)
 
-        # Apply option defaults only when the user didn't provide a value
+        # Apply defaults for fields not provided by the caller
+        data.setdefault("frequency_value", 1)
+        data.setdefault("scheduling_mode", "rolling")
         data.setdefault("priority", options.get("default_priority", 3))
         data.setdefault(
             "assignment_strategy",
