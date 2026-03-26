@@ -65,20 +65,28 @@ def calculate_next_due(
     return next_due
 
 
-def calculate_next_due_after_skip(task: Task) -> date | None:
+def calculate_next_due_after_skip(
+    task: Task,
+    reference_date: date | None = None,
+) -> date | None:
     """Calculate the next due date when a task is skipped.
 
     Unlike complete, skip advances from the current next_due date
     rather than from last_completed, regardless of scheduling mode.
     """
+    today = reference_date or _ha_today()
+
     if task.frequency_type == FrequencyType.ONCE:
         return None
 
     if not task.next_due:
-        return _ha_today()
+        return today + timedelta(days=1)
 
     current_due = date.fromisoformat(task.next_due)
-    return advance_one_period(current_due, task)
+    next_due = advance_one_period(current_due, task)
+    if next_due <= today:
+        next_due = fast_forward_to(next_due, task, today + timedelta(days=1))
+    return next_due
 
 
 def calculate_initial_due(

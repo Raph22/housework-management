@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 import logging
 from types import MappingProxyType
+from typing import Any
 
 import voluptuous as vol
 
@@ -17,6 +18,21 @@ from homeassistant.helpers.service import async_extract_entity_ids
 from homeassistant.config_entries import ConfigSubentry
 
 from .assignment import determine_next_assignee, update_assignment_state
+
+
+def _validate_iso_date(value: Any) -> str:
+    """Validate and normalize a date value to an ISO date string."""
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, str):
+        try:
+            date.fromisoformat(value)
+            return value
+        except ValueError:
+            pass
+    raise vol.Invalid(f"Invalid date: {value}. Use YYYY-MM-DD format.")
 from .const import (
     ASSIGNMENT_STRATEGIES,
     DOMAIN,
@@ -65,21 +81,21 @@ ADD_TASK_SCHEMA = vol.Schema(
         ),
         vol.Optional("icon", default="mdi:broom"): cv.string,
         vol.Optional("labels"): vol.All(cv.ensure_list, [cv.string]),
-        vol.Optional("next_due"): cv.string,
+        vol.Optional("next_due"): _validate_iso_date,
     }
 )
 
 COMPLETE_TASK_SCHEMA = vol.Schema(
     {
         vol.Optional("completed_by"): cv.string,
-        vol.Optional("completed_at"): cv.string,
+        vol.Optional("completed_at"): cv.datetime,
     },
     extra=vol.ALLOW_EXTRA,
 )
 
 SNOOZE_TASK_SCHEMA = vol.Schema(
     {
-        vol.Required("snooze_until"): cv.string,
+        vol.Required("snooze_until"): _validate_iso_date,
     },
     extra=vol.ALLOW_EXTRA,
 )
@@ -104,7 +120,7 @@ UPDATE_TASK_SCHEMA = vol.Schema(
 
 REOPEN_TASK_SCHEMA = vol.Schema(
     {
-        vol.Required("next_due"): cv.string,
+        vol.Required("next_due"): _validate_iso_date,
     },
     extra=vol.ALLOW_EXTRA,
 )
@@ -131,6 +147,21 @@ REMOVE_LABEL_SCHEMA = vol.Schema(
         vol.Required("label_id"): cv.string,
     }
 )
+
+
+def _remove_label_reference(
+    task_data: dict,
+    label_id: str,
+) -> tuple[dict, bool]:
+    """Remove a label reference from task config data."""
+    current_labels = list(task_data.get("labels", []))
+    updated_labels = [existing for existing in current_labels if existing != label_id]
+    if updated_labels == current_labels:
+        return dict(task_data), False
+
+    updated_data = dict(task_data)
+    updated_data["labels"] = updated_labels
+    return updated_data, True
 
 
 def _get_entry_and_data(hass: HomeAssistant):
@@ -548,20 +579,33 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     async def handle_remove_label(call: ServiceCall) -> None:
         """Handle the remove_label service call."""
         entry, store, coordinator = _get_entry_and_data(hass)
-        if store is None:
+        if entry is None or store is None:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="integration_not_found",
             )
 
         label_id = call.data["label_id"]
+
+        for subentry in entry.subentries.values():
+            if subentry.subentry_type != "task":
+                continue
+            updated_data, changed = _remove_label_reference(
+                dict(subentry.data), label_id
+            )
+            if changed:
+                hass.config_entries.async_update_subentry(
+                    entry, subentry, data=updated_data
+                )
+
         removed = await store.async_remove_label(label_id)
         if not removed:
             raise ServiceValidationError(
-                    translation_domain=DOMAIN,
-                    translation_key="label_not_found",
-                )
+                translation_domain=DOMAIN,
+                translation_key="label_not_found",
+            )
         else:
+            await coordinator.async_request_refresh()
             _LOGGER.info("Removed label: %s", label_id)
 
     # Register services

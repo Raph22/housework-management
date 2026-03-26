@@ -157,6 +157,10 @@ class HouseworkStore:
         """Return assignment state for a task."""
         return self._assignment_state.get(task_id, {})
 
+    def get_all_assignment_state(self) -> dict[str, dict]:
+        """Return assignment state for all tasks."""
+        return dict(self._assignment_state)
+
     async def async_update_assignment_state(
         self, task_id: str, state: dict
     ) -> None:

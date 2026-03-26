@@ -264,6 +264,7 @@ class TaskSubentryFlowHandler(ConfigSubentryFlow):
     ) -> SubentryFlowResult:
         """Handle editing an existing task."""
         subentry = self._get_reconfigure_subentry()
+        entry = self._get_entry()
 
         if user_input is not None:
             data = _clean_task_data(user_input)
@@ -280,7 +281,16 @@ class TaskSubentryFlowHandler(ConfigSubentryFlow):
                 title=data.get("title", subentry.title),
             )
 
+        defaults = dict(subentry.data)
+        runtime_data = getattr(entry, "runtime_data", None)
+        if runtime_data is not None:
+            runtime_next_due = runtime_data.store.get_runtime_state(
+                subentry.subentry_id
+            ).get("next_due")
+            if runtime_next_due is not None:
+                defaults["next_due"] = runtime_next_due
+
         return self.async_show_form(
             step_id="reconfigure",
-            data_schema=_task_form_schema(defaults=dict(subentry.data)),
+            data_schema=_task_form_schema(defaults=defaults),
         )

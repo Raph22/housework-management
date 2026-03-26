@@ -56,6 +56,7 @@ SCHEDULING_FIELDS = frozenset({
     "frequency_days_of_week",
     "frequency_day_of_month",
     "scheduling_mode",
+    "next_due",
 })
 
 FREQUENCY_TYPES = [ft.value for ft in FrequencyType]

@@ -11,7 +11,7 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN
 from .coordinator import HouseworkCoordinator
-from .services import async_setup_services
+from .services import async_setup_services, async_unload_services
 from .store import HouseworkStore
 
 _LOGGER = logging.getLogger(__name__)
@@ -37,6 +37,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: HouseworkConfigEntry) -> bool:
     """Set up Housework from a config entry."""
+    await async_setup_services(hass)
+
     store = HouseworkStore(hass)
     await store.async_load()
 
@@ -64,7 +66,16 @@ async def _async_options_updated(
 
 async def async_unload_entry(hass: HomeAssistant, entry: HouseworkConfigEntry) -> bool:
     """Unload a Housework config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok:
+        remaining_entries = [
+            existing
+            for existing in hass.config_entries.async_entries(DOMAIN)
+            if existing is not entry
+        ]
+        if not remaining_entries:
+            await async_unload_services(hass)
+    return unload_ok
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: HouseworkConfigEntry) -> None:
