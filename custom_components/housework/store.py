@@ -42,16 +42,6 @@ class HouseworkStore:
 
         self._runtime_state = data.get("runtime_state", {})
 
-        # Migration: load legacy task data as runtime state
-        for task_id, task_data in data.get("tasks", {}).items():
-            if task_id not in self._runtime_state:
-                self._runtime_state[task_id] = {
-                    "last_completed": task_data.get("last_completed"),
-                    "next_due": task_data.get("next_due"),
-                    "current_assignee": task_data.get("current_assignee"),
-                    "created_at": task_data.get("created_at"),
-                }
-
         for record_data in data.get("history", []):
             self._history.append(CompletionRecord.from_dict(record_data))
 

@@ -91,53 +91,6 @@ class Task:
             icon=subentry_data.get("icon", DEFAULT_ICON),
         )
 
-    def to_dict(self) -> dict:
-        """Convert to dictionary for storage."""
-        return {
-            "id": self.id,
-            "title": self.title,
-            "description": self.description,
-            "priority": self.priority,
-            "frequency_type": self.frequency_type,
-            "frequency_value": self.frequency_value,
-            "frequency_days_of_week": self.frequency_days_of_week,
-            "frequency_day_of_month": self.frequency_day_of_month,
-            "scheduling_mode": self.scheduling_mode,
-            "assignees": self.assignees,
-            "assignment_strategy": self.assignment_strategy,
-            "current_assignee": self.current_assignee,
-            "last_completed": self.last_completed,
-            "next_due": self.next_due,
-            "created_at": self.created_at,
-            "labels": self.labels,
-            "icon": self.icon,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> Task:
-        """Create from dictionary (legacy storage format)."""
-        return cls(
-            id=data["id"],
-            title=data["title"],
-            description=data.get("description", ""),
-            priority=data.get("priority", DEFAULT_PRIORITY),
-            frequency_type=data.get("frequency_type", FrequencyType.WEEKLY),
-            frequency_value=data.get("frequency_value", DEFAULT_FREQUENCY_VALUE),
-            frequency_days_of_week=data.get("frequency_days_of_week", []),
-            frequency_day_of_month=data.get("frequency_day_of_month"),
-            scheduling_mode=data.get("scheduling_mode", DEFAULT_SCHEDULING_MODE),
-            assignees=data.get("assignees", []),
-            assignment_strategy=data.get(
-                "assignment_strategy", DEFAULT_ASSIGNMENT_STRATEGY
-            ),
-            current_assignee=data.get("current_assignee"),
-            last_completed=data.get("last_completed"),
-            next_due=data.get("next_due"),
-            created_at=data.get("created_at", _now_iso()),
-            labels=data.get("labels", []),
-            icon=data.get("icon", DEFAULT_ICON),
-        )
-
 
 @dataclass
 class CompletionRecord:

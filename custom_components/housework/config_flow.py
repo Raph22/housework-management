@@ -62,7 +62,7 @@ def _task_form_schema(
             ),
             vol.Optional(
                 "frequency_days_of_week",
-                default=[str(x) for x in d.get("frequency_days_of_week", [])],
+                default=d.get("frequency_days_of_week", []),
             ): SelectSelector(
                 SelectSelectorConfig(
                     options=["0", "1", "2", "3", "4", "5", "6"],
