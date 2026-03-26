@@ -98,19 +98,20 @@ data:
 
 ## Entities
 
-### Binary sensors
+Each task is a **device** with 4 entities:
 
-Each task creates a `binary_sensor.housework_<task_title>` entity:
+| Entity | Type | Description |
+|--------|------|-------------|
+| **Due** | Binary sensor | `on` when due or overdue, `off` when upcoming or completed |
+| **Next due** | Date sensor | Shows the due date with native relative rendering ("in 3 days") |
+| **Priority** | Select | P1-P4 dropdown, changeable directly from the dashboard |
+| **Mark done** | Button | Press to complete the task, advance schedule, rotate assignee |
 
-- **State**: `on` when due or overdue, `off` when upcoming
-- **Attributes**: `task_id`, `title`, `priority`, `next_due`, `last_completed`, `current_assignee`, `assignee_name`, `frequency`, `labels`, `days_overdue`, `scheduling_mode`, `assignment_strategy`
+The binary sensor also exposes attributes for templates: `task_id`, `title`, `priority`, `next_due`, `last_completed`, `current_assignee`, `assignee_name`, `frequency`, `labels`, `days_overdue`, `scheduling_mode`, `assignment_strategy`.
 
-### Calendar
+### Global entities (Housework hub device)
 
-`calendar.housework` shows all tasks as events, including projected future occurrences for recurring tasks.
-
-### Sensors
-
+- `calendar.housework` — all tasks as events, including projected future occurrences
 - `sensor.housework_tasks_due_today` — count of tasks due today (with task list in attributes)
 - `sensor.housework_overdue_tasks` — count of overdue tasks (with details in attributes)
 

@@ -143,8 +143,10 @@ def advance_one_period(base: date, task: Task) -> date:
                 base + timedelta(days=1),
                 task.frequency_days_of_week,
             )
-            # frequency_value > 1 means "every Nth week" (e.g., 2 = every other week)
-            if value > 1:
+            # frequency_value > 1 means "every Nth week". Only add extra
+            # weeks when we've wrapped past the last selected day in the
+            # week (i.e., the next matching day is in a new week).
+            if value > 1 and next_day.isocalendar()[1] != base.isocalendar()[1]:
                 next_day += timedelta(weeks=value - 1)
             return next_day
         return base + timedelta(days=1)

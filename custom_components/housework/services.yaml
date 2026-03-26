@@ -9,6 +9,7 @@ add_task:
       required: true
       selector:
         select:
+          translation_key: "frequency_type"
           options:
             - "daily"
             - "weekly"
@@ -49,6 +50,7 @@ add_task:
       default: "rolling"
       selector:
         select:
+          translation_key: "scheduling_mode"
           options:
             - "rolling"
             - "fixed"
@@ -57,6 +59,7 @@ add_task:
       default: 3
       selector:
         select:
+          translation_key: "priority"
           options:
             - "1"
             - "2"
@@ -78,6 +81,7 @@ add_task:
       default: "round_robin"
       selector:
         select:
+          translation_key: "assignment_strategy"
           options:
             - "round_robin"
             - "least_completed"
@@ -161,6 +165,7 @@ update_task:
       required: false
       selector:
         select:
+          translation_key: "priority"
           options:
             - "1"
             - "2"

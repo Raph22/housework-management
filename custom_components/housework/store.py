@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 
 from .const import MAX_HISTORY_RECORDS, STORAGE_KEY, STORAGE_VERSION
@@ -65,15 +65,19 @@ class HouseworkStore:
         """Remove the storage file."""
         await self._store.async_remove()
 
-    async def _async_save(self) -> None:
-        """Save data to storage."""
-        data = {
+    @callback
+    def _async_schedule_save(self) -> None:
+        """Schedule a debounced save to storage."""
+        self._store.async_delay_save(self._data_to_save, delay=1.0)
+
+    def _data_to_save(self) -> dict[str, Any]:
+        """Return data dict for storage."""
+        return {
             "runtime_state": self._runtime_state,
             "history": [r.to_dict() for r in self._history],
             "labels": {lid: label.to_dict() for lid, label in self._labels.items()},
             "assignment_state": self._assignment_state,
         }
-        await self._store.async_save(data)
 
     # --- Runtime State (per task, keyed by subentry_id) ---
 
@@ -91,13 +95,13 @@ class HouseworkStore:
         """Update runtime state for a task."""
         state = self._runtime_state.setdefault(task_id, {})
         state.update(updates)
-        await self._async_save()
+        self._async_schedule_save()
 
     async def async_remove_runtime_state(self, task_id: str) -> None:
         """Remove runtime state for a deleted task."""
         self._runtime_state.pop(task_id, None)
         self._assignment_state.pop(task_id, None)
-        await self._async_save()
+        self._async_schedule_save()
 
     # --- History ---
 
@@ -120,7 +124,7 @@ class HouseworkStore:
         if len(self._history) > MAX_HISTORY_RECORDS:
             self._history.sort(key=lambda r: r.completed_at, reverse=True)
             self._history = self._history[:MAX_HISTORY_RECORDS]
-        await self._async_save()
+        self._async_schedule_save()
 
     # --- Labels ---
 
@@ -135,7 +139,7 @@ class HouseworkStore:
     async def async_add_label(self, label: Label) -> Label:
         """Add a new label."""
         self._labels[label.id] = label
-        await self._async_save()
+        self._async_schedule_save()
         return label
 
     async def async_update_label(self, label_id: str, updates: dict) -> Label | None:
@@ -146,7 +150,7 @@ class HouseworkStore:
         for key, value in updates.items():
             if key in ("name", "color", "icon"):
                 setattr(label, key, value)
-        await self._async_save()
+        self._async_schedule_save()
         return label
 
     async def async_remove_label(self, label_id: str) -> bool:
@@ -154,7 +158,7 @@ class HouseworkStore:
         if label_id not in self._labels:
             return False
         del self._labels[label_id]
-        await self._async_save()
+        self._async_schedule_save()
         return True
 
     # --- Assignment State ---
@@ -168,4 +172,4 @@ class HouseworkStore:
     ) -> None:
         """Update assignment state for a task."""
         self._assignment_state[task_id] = state
-        await self._async_save()
+        self._async_schedule_save()

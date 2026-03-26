@@ -10,8 +10,6 @@ from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
 from .coordinator import HouseworkCoordinator
-from .models import Task
-from .scheduling import calculate_initial_due
 from .services import async_setup_services, async_unload_services
 from .store import HouseworkStore
 
@@ -35,26 +33,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: HouseworkConfigEntry) ->
     store = HouseworkStore(hass)
     await store.async_load()
 
-    # Ensure runtime state exists for all task subentries
-    for subentry in entry.subentries.values():
-        if subentry.subentry_type != "task":
-            continue
-        state = store.get_runtime_state(subentry.subentry_id)
-        if not state.get("next_due"):
-            data = dict(subentry.data)
-            task = Task.from_subentry(subentry.subentry_id, data)
-            if data.get("next_due"):
-                initial_due_str = data["next_due"]
-            else:
-                initial_due_str = calculate_initial_due(task).isoformat()
-            updates = {
-                "next_due": initial_due_str,
-                "created_at": state.get("created_at", task.created_at),
-            }
-            if task.assignees and not state.get("current_assignee"):
-                updates["current_assignee"] = task.assignees[0]
-            await store.async_update_runtime_state(subentry.subentry_id, updates)
-
+    # Runtime state initialization is handled by the coordinator's
+    # _async_update_data on first refresh (and every subsequent refresh).
     coordinator = HouseworkCoordinator(hass, store, entry)
     await coordinator.async_config_entry_first_refresh()
 

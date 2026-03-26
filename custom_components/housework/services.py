@@ -154,14 +154,24 @@ def _get_task_from_entity_id(hass: HomeAssistant, entity_id: str):
     if entity_entry is None:
         return None, None, None, None
 
-    # unique_id is "housework_{subentry_id}"
+    # unique_id is "housework_{subentry_id}_{suffix}" (e.g., _due, _mark_done)
     unique_id = entity_entry.unique_id
     prefix = "housework_"
-    if unique_id and unique_id.startswith(prefix):
-        task_id = unique_id[len(prefix):]
-        task = coordinator.data.get(task_id)
-        if task:
-            return task, store, coordinator, entry
+    if not unique_id or not unique_id.startswith(prefix):
+        return None, None, None, None
+
+    remainder = unique_id[len(prefix):]
+    # Try stripping known suffixes, fall back to using remainder as-is
+    for suffix in ("_due", "_mark_done", "_priority", "_next_due"):
+        if remainder.endswith(suffix):
+            task_id = remainder[: -len(suffix)]
+            break
+    else:
+        task_id = remainder
+
+    task = coordinator.data.get(task_id)
+    if task:
+        return task, store, coordinator, entry
 
     return None, None, None, None
 

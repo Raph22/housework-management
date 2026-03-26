@@ -123,6 +123,10 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
 
         return {
             "task_id": task.id,
+            "title": task.title,
+            "priority": task.priority,
+            "next_due": task.next_due,
+            "last_completed": task.last_completed,
             "current_assignee": task.current_assignee,
             "assignee_name": assignee_name,
             "frequency": format_frequency(task),
