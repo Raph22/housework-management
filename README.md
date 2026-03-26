@@ -1,8 +1,14 @@
 # Housework
 
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
+
 A Home Assistant custom integration for managing household chores and recurring tasks.
 
 Assign tasks to household members, track completions, and automate reminders — all from within Home Assistant using standard dashboard cards and automations.
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Raph22&repository=housework-management&category=integration)
+
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=housework)
 
 ## Features
 
