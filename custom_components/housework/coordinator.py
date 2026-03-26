@@ -26,6 +26,29 @@ def _scheduling_signature(data: dict) -> dict:
     return {k: data.get(k) for k in SCHEDULING_FIELDS}
 
 
+def _resolve_reconfigured_next_due(
+    subentry_data: dict,
+    runtime_state: dict,
+    previous_signature: dict | None = None,
+) -> str | None:
+    """Resolve runtime next_due after a task reconfigure."""
+    previous_next_due = (previous_signature or {}).get("next_due")
+    explicit_next_due = subentry_data.get("next_due")
+
+    if explicit_next_due is not None and explicit_next_due != previous_next_due:
+        return explicit_next_due
+
+    task = Task.from_subentry("reconfigured", subentry_data, runtime_state)
+    if task.last_completed:
+        next_due = calculate_next_due(task)
+    else:
+        next_due = calculate_initial_due(
+            Task.from_subentry("reconfigured", subentry_data)
+        )
+
+    return next_due.isoformat() if next_due else None
+
+
 class HouseworkCoordinator(DataUpdateCoordinator[dict[str, Task]]):
     """Coordinator that merges subentry config + runtime state into Task objects."""
 
@@ -94,14 +117,11 @@ class HouseworkCoordinator(DataUpdateCoordinator[dict[str, Task]]):
                 updates = {}
 
                 if old_sig != new_sig:
-                    task = Task.from_subentry(sid, data, runtime)
-                    if task.last_completed:
-                        new_due = calculate_next_due(task)
-                        if new_due:
-                            updates["next_due"] = new_due.isoformat()
-                    else:
-                        fresh_task = Task.from_subentry(sid, data)
-                        updates["next_due"] = calculate_initial_due(fresh_task).isoformat()
+                    updates["next_due"] = _resolve_reconfigured_next_due(
+                        subentry_data=data,
+                        runtime_state=runtime,
+                        previous_signature=old_sig,
+                    )
                     updates["scheduling_signature"] = new_sig
 
                 # Reconcile assignee
