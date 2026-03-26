@@ -62,7 +62,7 @@ def _task_form_schema(
             ),
             vol.Optional(
                 "frequency_days_of_week",
-                default=d.get("frequency_days_of_week", []),
+                default=[str(x) for x in d.get("frequency_days_of_week", [])],
             ): SelectSelector(
                 SelectSelectorConfig(
                     options=["0", "1", "2", "3", "4", "5", "6"],
@@ -135,8 +135,9 @@ def _clean_task_data(user_input: dict[str, Any]) -> dict[str, Any]:
         else:
             del data["frequency_day_of_month"]
     if "frequency_days_of_week" in data:
+        # Keep as strings to match SelectSelector options for display
         data["frequency_days_of_week"] = [
-            int(d) for d in data["frequency_days_of_week"]
+            str(d) for d in data["frequency_days_of_week"]
         ]
     return data
 
