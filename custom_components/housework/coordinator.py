@@ -68,14 +68,9 @@ class HouseworkCoordinator(DataUpdateCoordinator[dict[str, Task]]):
             data = dict(subentry.data)
             runtime = all_runtime.get(sid, {})
 
-            # Initialize runtime state for new subentries (added via UI).
-            # Skip if this is a completed once-task (has last_completed but no next_due).
-            is_completed_once = (
-                not runtime.get("next_due")
-                and runtime.get("last_completed")
-                and data.get("frequency_type") == "once"
-            )
-            if not runtime.get("next_due") and not is_completed_once:
+            # Initialize runtime state only when no runtime record exists yet.
+            # Completed or skipped one-shot tasks intentionally persist next_due=None.
+            if sid not in all_runtime:
                 task = Task.from_subentry(sid, data)
                 # Use explicit next_due from subentry data if provided
                 if data.get("next_due"):
