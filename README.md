@@ -194,7 +194,7 @@ Go to **Settings > Integrations > Housework > Configure** to set:
 
 ## Data storage
 
-Task definitions are stored in HA's config entry subentries. Runtime state (due dates, completion history, assignee rotation, labels) is stored locally in `.storage/housework`. No external server or database required. Completion history is capped at 500 records.
+Task definitions are stored in HA's config entry subentries. Runtime state (due dates, completion history, assignee rotation) is stored locally in `.storage/housework`. No external server or database required. Completion history is capped at 500 records.
 
 ## License
 

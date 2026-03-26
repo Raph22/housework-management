@@ -43,6 +43,7 @@
             "priority": "Priorité",
             "assignees": "Responsables",
             "assignment_strategy": "Stratégie d'attribution",
+            "area": "Zone",
             "description": "Description",
             "icon": "Icône"
           },
@@ -67,6 +68,7 @@
             "priority": "Priorité",
             "assignees": "Responsables",
             "assignment_strategy": "Stratégie d'attribution",
+            "area": "Zone",
             "description": "Description",
             "icon": "Icône"
           },

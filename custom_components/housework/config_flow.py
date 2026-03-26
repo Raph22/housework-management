@@ -16,6 +16,7 @@ from homeassistant.config_entries import (
 )
 from homeassistant.core import callback
 from homeassistant.helpers.selector import (
+    AreaSelector,
     DateSelector,
     EntitySelector,
     EntitySelectorConfig,
@@ -111,6 +112,10 @@ def _task_form_schema(
                     translation_key="assignment_strategy",
                 )
             ),
+            vol.Optional(
+                "area",
+                description={"suggested_value": d.get("area")},
+            ): AreaSelector(),
             vol.Optional(
                 "description", default=d.get("description", "")
             ): TextSelector(

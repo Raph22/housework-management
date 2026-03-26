@@ -43,6 +43,7 @@
             "priority": "Priority",
             "assignees": "Assignees",
             "assignment_strategy": "Assignment strategy",
+            "area": "Area",
             "description": "Description",
             "icon": "Icon"
           },
@@ -67,6 +68,7 @@
             "priority": "Priority",
             "assignees": "Assignees",
             "assignment_strategy": "Assignment strategy",
+            "area": "Area",
             "description": "Description",
             "icon": "Icon"
           },

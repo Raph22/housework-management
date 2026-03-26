@@ -13,7 +13,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .coordinator import HouseworkCoordinator, SUBENTRY_TYPE_TASK
-from .entity import task_device_info
+from .entity import resolve_area_name, task_device_info
 from .models import Task
 from .scheduling import format_frequency
 
@@ -30,12 +30,18 @@ async def async_setup_entry(
 
     known_task_ids: set[str] = set()
 
+    def _get_area_name(task_id: str) -> str | None:
+        """Resolve area name from subentry data."""
+        subentry = entry.subentries.get(task_id)
+        if subentry:
+            return resolve_area_name(hass, subentry.data.get("area"))
+        return None
+
     @callback
     def _async_add_new_entities() -> None:
         if not coordinator.data:
             known_task_ids.clear()
             return
-        # Prune IDs for deleted tasks
         known_task_ids.difference_update(
             known_task_ids - set(coordinator.data.keys())
         )
@@ -43,7 +49,7 @@ async def async_setup_entry(
             if task_id not in known_task_ids:
                 known_task_ids.add(task_id)
                 async_add_entities(
-                    [HouseworkTaskSensor(coordinator, task)],
+                    [HouseworkTaskSensor(coordinator, task, _get_area_name(task_id))],
                     config_subentry_id=task_id,
                 )
 
@@ -54,7 +60,7 @@ async def async_setup_entry(
         if coordinator.data and task_id in coordinator.data:
             known_task_ids.add(task_id)
             async_add_entities(
-                [HouseworkTaskSensor(coordinator, coordinator.data[task_id])],
+                [HouseworkTaskSensor(coordinator, coordinator.data[task_id], _get_area_name(task_id))],
                 config_subentry_id=task_id,
             )
 
@@ -67,12 +73,17 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
     _attr_has_entity_name = True
     _attr_translation_key = "task_due"
 
-    def __init__(self, coordinator: HouseworkCoordinator, task: Task) -> None:
+    def __init__(
+        self,
+        coordinator: HouseworkCoordinator,
+        task: Task,
+        suggested_area: str | None = None,
+    ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, context=task.id)
         self._task_id = task.id
         self._attr_unique_id = f"housework_{task.id}_due"
-        self._attr_device_info = task_device_info(task)
+        self._attr_device_info = task_device_info(task, suggested_area)
 
     @property
     def _task(self) -> Task | None:
