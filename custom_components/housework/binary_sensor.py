@@ -119,13 +119,6 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
                     "friendly_name", task.current_assignee
                 )
 
-        label_names = []
-        all_labels = self.coordinator.store.get_all_labels()
-        for label_id in task.labels:
-            label = all_labels.get(label_id)
-            if label:
-                label_names.append(label.name)
-
         return {
             "task_id": task.id,
             "title": task.title,
@@ -135,7 +128,6 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
             "current_assignee": task.current_assignee,
             "assignee_name": assignee_name,
             "frequency": format_frequency(task),
-            "labels": label_names,
             "days_overdue": max(days_overdue, 0),
             "scheduling_mode": task.scheduling_mode,
             "assignment_strategy": task.assignment_strategy,

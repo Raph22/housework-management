@@ -17,11 +17,10 @@ Assign tasks to household members, track completions, and automate reminders —
 - **Person assignment** with rotation strategies: round robin, least completed, random, or fixed
 - **Completion history** tracked in storage
 - **Priority levels** (P1 urgent to P4 low)
-- **Labels** for categorizing tasks (e.g., Kitchen, Bathroom)
 - **Binary sensor per task** — turns on when due/overdue, works with any HA automation
 - **Calendar entity** — view all chores on the HA calendar
 - **Stats sensors** — "tasks due today" and "overdue tasks" counts for dashboard badges
-- **11 services** for full task and label management from automations and scripts
+- **8 services** for full task management from automations and scripts
 - **Events** fired on complete, skip, and snooze for automation triggers
 - **English and French** translations
 
@@ -98,9 +97,6 @@ data:
 | `housework.update_task` | Modify task properties (title, priority, icon, etc.) |
 | `housework.remove_task` | Delete a task |
 | `housework.reopen_task` | Set a new due date on a completed task |
-| `housework.add_label` | Create a label for categorizing tasks |
-| `housework.update_label` | Modify a label |
-| `housework.remove_label` | Delete a label |
 
 ## Entities
 
@@ -113,7 +109,9 @@ Each task is a **device** with 4 entities:
 | **Priority** | Select | P1-P4 dropdown, changeable directly from the dashboard |
 | **Mark done** | Button | Press to complete the task, advance schedule, rotate assignee |
 
-The binary sensor also exposes attributes for templates: `task_id`, `title`, `priority`, `next_due`, `last_completed`, `current_assignee`, `assignee_name`, `frequency`, `labels`, `days_overdue`, `scheduling_mode`, `assignment_strategy`.
+The binary sensor also exposes attributes for templates: `task_id`, `title`, `priority`, `next_due`, `last_completed`, `current_assignee`, `assignee_name`, `frequency`, `days_overdue`, `scheduling_mode`, `assignment_strategy`.
+
+Use HA's native labels (Settings > Labels) to categorize tasks — assign labels to task devices or entities for targeting in automations.
 
 ### Global entities (Housework hub device)
 

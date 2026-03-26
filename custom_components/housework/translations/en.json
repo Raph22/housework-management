@@ -147,7 +147,6 @@
         "assignees": { "name": "Assignees", "description": "Person entities to assign." },
         "assignment_strategy": { "name": "Assignment strategy", "description": "How to rotate assignees." },
         "icon": { "name": "Icon", "description": "MDI icon for the task." },
-        "labels": { "name": "Labels", "description": "Label IDs to categorize the task." },
         "next_due": { "name": "First due date", "description": "When the task is first due." }
       }
     },
@@ -181,8 +180,7 @@
         "title": { "name": "Title", "description": "New name." },
         "description": { "name": "Description", "description": "New description." },
         "priority": { "name": "Priority", "description": "New priority." },
-        "icon": { "name": "Icon", "description": "New icon." },
-        "labels": { "name": "Labels", "description": "Label IDs to attach." }
+        "icon": { "name": "Icon", "description": "New icon." }
       }
     },
     "remove_task": { "name": "Remove task", "description": "Delete a task." },
@@ -191,32 +189,6 @@
       "description": "Set a new due date on a completed or snoozed task.",
       "fields": {
         "next_due": { "name": "Due date", "description": "New due date for the task." }
-      }
-    },
-    "add_label": {
-      "name": "Add label",
-      "description": "Create a new label.",
-      "fields": {
-        "name": { "name": "Name", "description": "Name of the label." },
-        "color": { "name": "Color", "description": "Hex color (e.g. #FF5733)." },
-        "icon": { "name": "Icon", "description": "MDI icon." }
-      }
-    },
-    "update_label": {
-      "name": "Update label",
-      "description": "Update a label.",
-      "fields": {
-        "label_id": { "name": "Label ID", "description": "ID of the label." },
-        "name": { "name": "Name", "description": "New name." },
-        "color": { "name": "Color", "description": "New color." },
-        "icon": { "name": "Icon", "description": "New icon." }
-      }
-    },
-    "remove_label": {
-      "name": "Remove label",
-      "description": "Delete a label.",
-      "fields": {
-        "label_id": { "name": "Label ID", "description": "ID of the label." }
       }
     }
   },
@@ -243,7 +215,6 @@
     "no_target": { "message": "No target entity specified." },
     "task_not_found": { "message": "Task not found for the specified entity." },
     "integration_not_found": { "message": "Housework integration not found." },
-    "label_not_found": { "message": "Label not found." },
     "days_of_week_required": { "message": "Select at least one weekday for this frequency." },
     "assignee_not_allowed": { "message": "Selected assignee is not configured for this task." }
   }

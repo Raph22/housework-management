@@ -147,7 +147,6 @@
         "assignees": { "name": "Responsables", "description": "Personnes à qui attribuer." },
         "assignment_strategy": { "name": "Stratégie d'attribution", "description": "Comment alterner les responsables." },
         "icon": { "name": "Icône", "description": "Icône MDI pour la tâche." },
-        "labels": { "name": "Labels", "description": "Identifiants des labels à associer." },
         "next_due": { "name": "Première échéance", "description": "Date de la première échéance." }
       }
     },
@@ -181,8 +180,7 @@
         "title": { "name": "Titre", "description": "Nouveau nom." },
         "description": { "name": "Description", "description": "Nouvelle description." },
         "priority": { "name": "Priorité", "description": "Nouveau niveau." },
-        "icon": { "name": "Icône", "description": "Nouvelle icône." },
-        "labels": { "name": "Labels", "description": "Identifiants des labels à associer." }
+        "icon": { "name": "Icône", "description": "Nouvelle icône." }
       }
     },
     "remove_task": { "name": "Supprimer une tâche", "description": "Supprimer une tâche." },
@@ -191,32 +189,6 @@
       "description": "Définir une nouvelle échéance sur une tâche terminée ou reportée.",
       "fields": {
         "next_due": { "name": "Date d'échéance", "description": "Nouvelle date d'échéance." }
-      }
-    },
-    "add_label": {
-      "name": "Ajouter un label",
-      "description": "Créer un nouveau label.",
-      "fields": {
-        "name": { "name": "Nom", "description": "Nom du label." },
-        "color": { "name": "Couleur", "description": "Couleur hexadécimale (ex. #FF5733)." },
-        "icon": { "name": "Icône", "description": "Icône MDI." }
-      }
-    },
-    "update_label": {
-      "name": "Modifier un label",
-      "description": "Modifier un label.",
-      "fields": {
-        "label_id": { "name": "ID du label", "description": "Identifiant du label." },
-        "name": { "name": "Nom", "description": "Nouveau nom." },
-        "color": { "name": "Couleur", "description": "Nouvelle couleur." },
-        "icon": { "name": "Icône", "description": "Nouvelle icône." }
-      }
-    },
-    "remove_label": {
-      "name": "Supprimer un label",
-      "description": "Supprimer un label.",
-      "fields": {
-        "label_id": { "name": "ID du label", "description": "Identifiant du label." }
       }
     }
   },
@@ -243,7 +215,6 @@
     "no_target": { "message": "Aucune entité cible spécifiée." },
     "task_not_found": { "message": "Tâche introuvable pour l'entité spécifiée." },
     "integration_not_found": { "message": "Intégration Housework introuvable." },
-    "label_not_found": { "message": "Label introuvable." },
     "days_of_week_required": { "message": "Sélectionnez au moins un jour de la semaine pour cette fréquence." },
     "assignee_not_allowed": { "message": "La personne sélectionnée n'est pas configurée pour cette tâche." }
   }

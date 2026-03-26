@@ -53,7 +53,6 @@ class Task:
     created_at: str = ""
 
     # Metadata
-    labels: list[str] = field(default_factory=list)
     icon: str = DEFAULT_ICON
 
     @classmethod
@@ -87,7 +86,6 @@ class Task:
             last_completed=state.get("last_completed"),
             next_due=state.get("next_due"),
             created_at=state.get("created_at", _now_iso()),
-            labels=subentry_data.get("labels", []),
             icon=subentry_data.get("icon", DEFAULT_ICON),
         )
 
@@ -127,33 +125,4 @@ class CompletionRecord:
             action=data.get("action", CompletionAction.COMPLETED),
             notes=data.get("notes", ""),
             snooze_until=data.get("snooze_until"),
-        )
-
-
-@dataclass
-class Label:
-    """A label/category for tasks."""
-
-    id: str = field(default_factory=_new_id)
-    name: str = ""
-    color: str = ""
-    icon: str = ""
-
-    def to_dict(self) -> dict:
-        """Convert to dictionary for storage."""
-        return {
-            "id": self.id,
-            "name": self.name,
-            "color": self.color,
-            "icon": self.icon,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> Label:
-        """Create from dictionary."""
-        return cls(
-            id=data["id"],
-            name=data["name"],
-            color=data.get("color", ""),
-            icon=data.get("icon", ""),
         )

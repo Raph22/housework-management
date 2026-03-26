@@ -9,7 +9,6 @@ from homeassistant.core import HomeAssistant
 REDACT_KEYS = {
     "title",
     "description",
-    "name",
     "assignees",
     "current_assignee",
     "completed_by",
@@ -26,14 +25,6 @@ async def async_get_config_entry_diagnostics(
     store = getattr(runtime_data, "store", None)
 
     runtime_state = store.get_all_runtime_state() if store else {}
-    labels = (
-        {
-            label_id: label.to_dict()
-            for label_id, label in store.get_all_labels().items()
-        }
-        if store
-        else {}
-    )
     assignment_state = store.get_all_assignment_state() if store else {}
 
     diagnostics = {
@@ -45,7 +36,6 @@ async def async_get_config_entry_diagnostics(
             for subentry_id, subentry in entry.subentries.items()
         },
         "runtime_state": runtime_state,
-        "labels": labels,
         "assignment_state": assignment_state,
     }
     return async_redact_data(diagnostics, REDACT_KEYS)

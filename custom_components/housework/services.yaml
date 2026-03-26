@@ -91,11 +91,6 @@ add_task:
       required: false
       selector:
         icon:
-    labels:
-      required: false
-      selector:
-        text:
-          multiple: true
     next_due:
       required: false
       selector:
@@ -175,11 +170,6 @@ update_task:
       required: false
       selector:
         icon:
-    labels:
-      required: false
-      selector:
-        text:
-          multiple: true
 
 remove_task:
   target:
@@ -197,44 +187,3 @@ reopen_task:
       required: true
       selector:
         date:
-
-add_label:
-  fields:
-    name:
-      required: true
-      selector:
-        text:
-    color:
-      required: false
-      selector:
-        text:
-    icon:
-      required: false
-      selector:
-        icon:
-
-update_label:
-  fields:
-    label_id:
-      required: true
-      selector:
-        text:
-    name:
-      required: false
-      selector:
-        text:
-    color:
-      required: false
-      selector:
-        text:
-    icon:
-      required: false
-      selector:
-        icon:
-
-remove_label:
-  fields:
-    label_id:
-      required: true
-      selector:
-        text:

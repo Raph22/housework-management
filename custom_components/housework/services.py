@@ -42,7 +42,7 @@ from .const import (
     CompletionAction,
     FrequencyType,
 )
-from .models import CompletionRecord, Label, Task
+from .models import CompletionRecord, Task
 from .scheduling import calculate_initial_due, calculate_next_due, calculate_next_due_after_skip
 
 _LOGGER = logging.getLogger(__name__)
@@ -55,9 +55,6 @@ SERVICE_REASSIGN_TASK = "reassign_task"
 SERVICE_UPDATE_TASK = "update_task"
 SERVICE_REMOVE_TASK = "remove_task"
 SERVICE_REOPEN_TASK = "reopen_task"
-SERVICE_ADD_LABEL = "add_label"
-SERVICE_UPDATE_LABEL = "update_label"
-SERVICE_REMOVE_LABEL = "remove_label"
 
 ADD_TASK_SCHEMA = vol.Schema(
     {
@@ -80,7 +77,6 @@ ADD_TASK_SCHEMA = vol.Schema(
             ASSIGNMENT_STRATEGIES
         ),
         vol.Optional("icon", default="mdi:broom"): cv.string,
-        vol.Optional("labels"): vol.All(cv.ensure_list, [cv.string]),
         vol.Optional("next_due"): _validate_iso_date,
     }
 )
@@ -113,7 +109,6 @@ UPDATE_TASK_SCHEMA = vol.Schema(
         vol.Optional("description"): cv.string,
         vol.Optional("priority"): vol.All(vol.Coerce(int), vol.Range(min=1, max=4)),
         vol.Optional("icon"): cv.string,
-        vol.Optional("labels"): vol.All(cv.ensure_list, [cv.string]),
     },
     extra=vol.ALLOW_EXTRA,
 )
@@ -124,45 +119,6 @@ REOPEN_TASK_SCHEMA = vol.Schema(
     },
     extra=vol.ALLOW_EXTRA,
 )
-
-ADD_LABEL_SCHEMA = vol.Schema(
-    {
-        vol.Required("name"): cv.string,
-        vol.Optional("color", default=""): cv.string,
-        vol.Optional("icon", default=""): cv.string,
-    }
-)
-
-UPDATE_LABEL_SCHEMA = vol.Schema(
-    {
-        vol.Required("label_id"): cv.string,
-        vol.Optional("name"): cv.string,
-        vol.Optional("color"): cv.string,
-        vol.Optional("icon"): cv.string,
-    }
-)
-
-REMOVE_LABEL_SCHEMA = vol.Schema(
-    {
-        vol.Required("label_id"): cv.string,
-    }
-)
-
-
-def _remove_label_reference(
-    task_data: dict,
-    label_id: str,
-) -> tuple[dict, bool]:
-    """Remove a label reference from task config data."""
-    current_labels = list(task_data.get("labels", []))
-    updated_labels = [existing for existing in current_labels if existing != label_id]
-    if updated_labels == current_labels:
-        return dict(task_data), False
-
-    updated_data = dict(task_data)
-    updated_data["labels"] = updated_labels
-    return updated_data, True
-
 
 def _get_entry_and_data(hass: HomeAssistant):
     """Get the config entry, store, and coordinator."""
@@ -477,7 +433,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         new_data = dict(subentry.data)
         new_title = subentry.title
-        for key in ("title", "description", "icon", "priority", "labels"):
+        for key in ("title", "description", "icon", "priority"):
             if key in call.data:
                 new_data[key] = call.data[key]
                 if key == "title":
@@ -534,80 +490,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         await coordinator.async_request_refresh()
         _LOGGER.info("Reopened task: %s, due %s", task.title, next_due)
 
-    async def handle_add_label(call: ServiceCall) -> None:
-        """Handle the add_label service call."""
-        entry, store, coordinator = _get_entry_and_data(hass)
-        if store is None:
-            raise ServiceValidationError(
-                translation_domain=DOMAIN,
-                translation_key="integration_not_found",
-            )
-
-        label = Label(
-            name=call.data["name"],
-            color=call.data.get("color", ""),
-            icon=call.data.get("icon", ""),
-        )
-        await store.async_add_label(label)
-        _LOGGER.info("Added label: %s", label.name)
-
-    async def handle_update_label(call: ServiceCall) -> None:
-        """Handle the update_label service call."""
-        entry, store, coordinator = _get_entry_and_data(hass)
-        if store is None:
-            raise ServiceValidationError(
-                translation_domain=DOMAIN,
-                translation_key="integration_not_found",
-            )
-
-        label_id = call.data["label_id"]
-        updates = {}
-        for key in ("name", "color", "icon"):
-            if key in call.data:
-                updates[key] = call.data[key]
-
-        if updates:
-            result = await store.async_update_label(label_id, updates)
-            if result is None:
-                raise ServiceValidationError(
-                    translation_domain=DOMAIN,
-                    translation_key="label_not_found",
-                )
-            else:
-                _LOGGER.info("Updated label: %s", result.name)
-
-    async def handle_remove_label(call: ServiceCall) -> None:
-        """Handle the remove_label service call."""
-        entry, store, coordinator = _get_entry_and_data(hass)
-        if entry is None or store is None:
-            raise ServiceValidationError(
-                translation_domain=DOMAIN,
-                translation_key="integration_not_found",
-            )
-
-        label_id = call.data["label_id"]
-
-        for subentry in entry.subentries.values():
-            if subentry.subentry_type != "task":
-                continue
-            updated_data, changed = _remove_label_reference(
-                dict(subentry.data), label_id
-            )
-            if changed:
-                hass.config_entries.async_update_subentry(
-                    entry, subentry, data=updated_data
-                )
-
-        removed = await store.async_remove_label(label_id)
-        if not removed:
-            raise ServiceValidationError(
-                translation_domain=DOMAIN,
-                translation_key="label_not_found",
-            )
-        else:
-            await coordinator.async_request_refresh()
-            _LOGGER.info("Removed label: %s", label_id)
-
     # Register services
     hass.services.async_register(DOMAIN, SERVICE_ADD_TASK, handle_add_task, ADD_TASK_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_COMPLETE_TASK, handle_complete_task, COMPLETE_TASK_SCHEMA)
@@ -617,9 +499,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     hass.services.async_register(DOMAIN, SERVICE_UPDATE_TASK, handle_update_task, UPDATE_TASK_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_REMOVE_TASK, handle_remove_task)
     hass.services.async_register(DOMAIN, SERVICE_REOPEN_TASK, handle_reopen_task, REOPEN_TASK_SCHEMA)
-    hass.services.async_register(DOMAIN, SERVICE_ADD_LABEL, handle_add_label, ADD_LABEL_SCHEMA)
-    hass.services.async_register(DOMAIN, SERVICE_UPDATE_LABEL, handle_update_label, UPDATE_LABEL_SCHEMA)
-    hass.services.async_register(DOMAIN, SERVICE_REMOVE_LABEL, handle_remove_label, REMOVE_LABEL_SCHEMA)
 
 
 async def async_unload_services(hass: HomeAssistant) -> None:
@@ -633,8 +512,5 @@ async def async_unload_services(hass: HomeAssistant) -> None:
         SERVICE_UPDATE_TASK,
         SERVICE_REMOVE_TASK,
         SERVICE_REOPEN_TASK,
-        SERVICE_ADD_LABEL,
-        SERVICE_UPDATE_LABEL,
-        SERVICE_REMOVE_LABEL,
     ):
         hass.services.async_remove(DOMAIN, service)

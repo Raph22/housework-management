@@ -3,7 +3,6 @@
 Task definitions are stored in config subentries. This store holds:
 - Runtime state per task (last_completed, next_due, current_assignee)
 - Completion history
-- Labels
 - Assignment state (rotation tracking)
 """
 
@@ -16,7 +15,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 
 from .const import MAX_HISTORY_RECORDS, STORAGE_KEY, STORAGE_VERSION
-from .models import CompletionRecord, Label
+from .models import CompletionRecord
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,7 +30,6 @@ class HouseworkStore:
         )
         self._runtime_state: dict[str, dict[str, Any]] = {}
         self._history: list[CompletionRecord] = []
-        self._labels: dict[str, Label] = {}
         self._assignment_state: dict[str, dict] = {}
 
     async def async_load(self) -> None:
@@ -44,10 +42,6 @@ class HouseworkStore:
 
         for record_data in data.get("history", []):
             self._history.append(CompletionRecord.from_dict(record_data))
-
-        for label_data in data.get("labels", {}).values():
-            label = Label.from_dict(label_data)
-            self._labels[label.id] = label
 
         self._assignment_state = data.get("assignment_state", {})
 
@@ -65,7 +59,6 @@ class HouseworkStore:
         return {
             "runtime_state": self._runtime_state,
             "history": [r.to_dict() for r in self._history],
-            "labels": {lid: label.to_dict() for lid, label in self._labels.items()},
             "assignment_state": self._assignment_state,
         }
 
@@ -115,41 +108,6 @@ class HouseworkStore:
             self._history.sort(key=lambda r: r.completed_at, reverse=True)
             self._history = self._history[:MAX_HISTORY_RECORDS]
         self._async_schedule_save()
-
-    # --- Labels ---
-
-    def get_all_labels(self) -> dict[str, Label]:
-        """Return all labels."""
-        return dict(self._labels)
-
-    def get_label(self, label_id: str) -> Label | None:
-        """Return a label by ID."""
-        return self._labels.get(label_id)
-
-    async def async_add_label(self, label: Label) -> Label:
-        """Add a new label."""
-        self._labels[label.id] = label
-        self._async_schedule_save()
-        return label
-
-    async def async_update_label(self, label_id: str, updates: dict) -> Label | None:
-        """Update a label."""
-        label = self._labels.get(label_id)
-        if label is None:
-            return None
-        for key, value in updates.items():
-            if key in ("name", "color", "icon"):
-                setattr(label, key, value)
-        self._async_schedule_save()
-        return label
-
-    async def async_remove_label(self, label_id: str) -> bool:
-        """Remove a label."""
-        if label_id not in self._labels:
-            return False
-        del self._labels[label_id]
-        self._async_schedule_save()
-        return True
 
     # --- Assignment State ---
 
