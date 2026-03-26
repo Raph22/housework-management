@@ -33,7 +33,12 @@ async def async_setup_entry(
     @callback
     def _async_add_new_entities() -> None:
         if not coordinator.data:
+            known_task_ids.clear()
             return
+        # Prune IDs for deleted tasks
+        known_task_ids.difference_update(
+            known_task_ids - set(coordinator.data.keys())
+        )
         for task_id, task in coordinator.data.items():
             if task_id not in known_task_ids:
                 known_task_ids.add(task_id)

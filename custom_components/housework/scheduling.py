@@ -178,10 +178,21 @@ def fast_forward_to(base: date, task: Task, target: date) -> date:
         days_gap = (target - base).days
         periods = max(0, days_gap // (7 * value) - 1)
         base = base + timedelta(weeks=periods * value)
+    elif freq == FrequencyType.MONTHLY and value > 0:
+        months_gap = (target.year - base.year) * 12 + (target.month - base.month)
+        periods = max(0, months_gap // value - 1)
+        if periods > 0:
+            base = _add_months(base, periods * value)
+    elif freq == FrequencyType.DAY_OF_WEEK and value > 0:
+        days_gap = (target - base).days
+        # Each cycle is value weeks
+        periods = max(0, days_gap // (7 * value) - 1)
+        if periods > 0:
+            base = base + timedelta(weeks=periods * value)
 
     # Final fine-grained advancement
     count = 0
-    while base < target and count < 200:
+    while base < target and count < 500:
         base = advance_one_period(base, task)
         count += 1
 
