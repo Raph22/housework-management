@@ -17,7 +17,7 @@ from .store import HouseworkStore
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = ["binary_sensor", "calendar", "sensor"]
+PLATFORMS = ["binary_sensor", "button", "calendar", "select", "sensor"]
 
 type HouseworkConfigEntry = ConfigEntry[HouseworkRuntimeData]
 

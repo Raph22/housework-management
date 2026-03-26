@@ -13,6 +13,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .coordinator import HouseworkCoordinator, SUBENTRY_TYPE_TASK
+from .entity import task_device_info
 from .models import Task
 from .scheduling import format_frequency
 
@@ -31,7 +32,6 @@ async def async_setup_entry(
 
     @callback
     def _async_add_new_entities() -> None:
-        """Add entities for any new tasks."""
         if not coordinator.data:
             return
         for task_id, task in coordinator.data.items():
@@ -42,7 +42,6 @@ async def async_setup_entry(
                     config_subentry_id=task_id,
                 )
 
-    # Add entities for existing task subentries
     for subentry in entry.subentries.values():
         if subentry.subentry_type != SUBENTRY_TYPE_TASK:
             continue
@@ -61,62 +60,40 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
     """Binary sensor for a housework task. On when due or overdue."""
 
     _attr_has_entity_name = True
+    _attr_translation_key = "task_due"
 
-    def __init__(
-        self,
-        coordinator: HouseworkCoordinator,
-        task: Task,
-    ) -> None:
+    def __init__(self, coordinator: HouseworkCoordinator, task: Task) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, context=task.id)
         self._task_id = task.id
-        self._attr_unique_id = f"housework_{task.id}"
-        self._attr_icon = task.icon
-
-    @property
-    def task_id(self) -> str:
-        """Return the task ID."""
-        return self._task_id
+        self._attr_unique_id = f"housework_{task.id}_due"
+        self._attr_device_info = task_device_info(task)
 
     @property
     def _task(self) -> Task | None:
-        """Return the current task from coordinator data."""
         if self.coordinator.data:
             return self.coordinator.data.get(self._task_id)
         return None
 
     @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        task = self._task
-        return task.title if task else "Unknown Task"
-
-    @property
     def available(self) -> bool:
-        """Return if entity is available."""
         return super().available and self._task is not None
 
     @property
     def is_on(self) -> bool | None:
-        """Return True if the task is due or overdue, False if completed/upcoming."""
         task = self._task
         if task is None:
             return None
-
-        # Once tasks with no next_due are completed — not due
         if task.next_due is None:
             return False
-
         try:
             due_date = date.fromisoformat(task.next_due)
         except (ValueError, TypeError):
             return None
-
         return dt_util.now().date() >= due_date
 
     @property
     def extra_state_attributes(self) -> dict | None:
-        """Return extra state attributes."""
         task = self._task
         if task is None:
             return None
@@ -146,10 +123,6 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
 
         return {
             "task_id": task.id,
-            "title": task.title,
-            "priority": task.priority,
-            "next_due": task.next_due,
-            "last_completed": task.last_completed,
             "current_assignee": task.current_assignee,
             "assignee_name": assignee_name,
             "frequency": format_frequency(task),
@@ -161,6 +134,5 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
 
     @property
     def icon(self) -> str:
-        """Return the icon."""
         task = self._task
         return task.icon if task else "mdi:broom"

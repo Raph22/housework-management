@@ -7,12 +7,12 @@ from datetime import date, datetime, timedelta
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, FrequencyType
+from .const import FrequencyType
 from .coordinator import HouseworkCoordinator
+from .entity import hub_device_info
 from .models import Task
 from .scheduling import advance_one_period, fast_forward_to
 
@@ -43,10 +43,7 @@ class HouseworkCalendar(CoordinatorEntity[HouseworkCoordinator], CalendarEntity)
         """Initialize the calendar."""
         super().__init__(coordinator)
         self._attr_unique_id = "housework_calendar"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, "housework_hub")},
-            name="Housework",
-        )
+        self._attr_device_info = hub_device_info()
 
     @property
     def event(self) -> CalendarEvent | None:

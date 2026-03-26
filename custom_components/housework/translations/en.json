@@ -218,9 +218,19 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "task_due": { "name": "Due" }
+    },
     "sensor": {
+      "next_due": { "name": "Next due" },
       "tasks_due_today": { "name": "Tasks due today" },
       "overdue_tasks": { "name": "Overdue tasks" }
+    },
+    "select": {
+      "priority": { "name": "Priority" }
+    },
+    "button": {
+      "mark_done": { "name": "Mark done" }
     },
     "calendar": {
       "housework": { "name": "Housework" }
