@@ -5,7 +5,6 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -25,7 +24,7 @@ async def async_setup_entry(
     """Set up Housework calendar from a config entry."""
     coordinator = entry.runtime_data.coordinator
 
-    async_add_entities([HouseworkCalendar(coordinator, entry)])
+    async_add_entities([HouseworkCalendar(coordinator)])
 
 
 class HouseworkCalendar(CoordinatorEntity[HouseworkCoordinator], CalendarEntity):
@@ -35,11 +34,7 @@ class HouseworkCalendar(CoordinatorEntity[HouseworkCoordinator], CalendarEntity)
     _attr_translation_key = "housework"
     _attr_icon = "mdi:broom"
 
-    def __init__(
-        self,
-        coordinator: HouseworkCoordinator,
-        entry: ConfigEntry,
-    ) -> None:
+    def __init__(self, coordinator: HouseworkCoordinator) -> None:
         """Initialize the calendar."""
         super().__init__(coordinator)
         self._attr_unique_id = "housework_calendar"
