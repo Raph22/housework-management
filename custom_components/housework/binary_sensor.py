@@ -12,7 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .coordinator import HouseworkCoordinator, SUBENTRY_TYPE_TASK
+from .coordinator import SUBENTRY_TYPE_TASK, HouseworkCoordinator
 from .entity import resolve_area_name, task_device_info
 from .models import Task
 from .scheduling import format_frequency
@@ -42,9 +42,7 @@ async def async_setup_entry(
         if not coordinator.data:
             known_task_ids.clear()
             return
-        known_task_ids.difference_update(
-            known_task_ids - set(coordinator.data.keys())
-        )
+        known_task_ids.difference_update(known_task_ids - set(coordinator.data.keys()))
         for task_id, task in coordinator.data.items():
             if task_id not in known_task_ids:
                 known_task_ids.add(task_id)
@@ -60,7 +58,11 @@ async def async_setup_entry(
         if coordinator.data and task_id in coordinator.data:
             known_task_ids.add(task_id)
             async_add_entities(
-                [HouseworkTaskSensor(coordinator, coordinator.data[task_id], _get_area_name(task_id))],
+                [
+                    HouseworkTaskSensor(
+                        coordinator, coordinator.data[task_id], _get_area_name(task_id)
+                    )
+                ],
                 config_subentry_id=task_id,
             )
 
@@ -126,9 +128,7 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
         if task.current_assignee:
             state = self.hass.states.get(task.current_assignee)
             if state:
-                assignee_name = state.attributes.get(
-                    "friendly_name", task.current_assignee
-                )
+                assignee_name = state.attributes.get("friendly_name", task.current_assignee)
 
         return {
             "task_id": task.id,

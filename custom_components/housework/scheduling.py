@@ -43,7 +43,10 @@ def calculate_next_due(
     # Determine the base date for calculation
     if task.scheduling_mode == SchedulingMode.ROLLING:
         if last_completed:
-            base = date.fromisoformat(last_completed[:10])
+            completed_at = dt_util.parse_datetime(last_completed)
+            if completed_at is None:
+                raise ValueError(f"Invalid completion timestamp: {last_completed}")
+            base = dt_util.as_local(completed_at).date()
         else:
             return today
     else:
@@ -51,16 +54,18 @@ def calculate_next_due(
         if task.next_due:
             base = date.fromisoformat(task.next_due)
         elif last_completed:
-            base = date.fromisoformat(last_completed[:10])
+            completed_at = dt_util.parse_datetime(last_completed)
+            if completed_at is None:
+                raise ValueError(f"Invalid completion timestamp: {last_completed}")
+            base = dt_util.as_local(completed_at).date()
         else:
             return today
 
     next_due = advance_one_period(base, task)
 
-    # For fixed scheduling: advance past today if in the past
+    # Completing a fixed occurrence consumes today's occurrence as well.
     if task.scheduling_mode == SchedulingMode.FIXED:
-        while next_due < today:
-            next_due = advance_one_period(next_due, task)
+        next_due = fast_forward_to(next_due, task, today + timedelta(days=1))
 
     return next_due
 
@@ -108,18 +113,22 @@ def calculate_initial_due(
 
     if task.frequency_type == FrequencyType.MONTHLY and task.frequency_day_of_month:
         try:
-            candidate = today.replace(day=min(
-                task.frequency_day_of_month,
-                _days_in_month(today.year, today.month),
-            ))
+            candidate = today.replace(
+                day=min(
+                    task.frequency_day_of_month,
+                    _days_in_month(today.year, today.month),
+                )
+            )
         except ValueError:
             candidate = today
         if candidate < today:
             candidate = _add_months(candidate, 1)
-            candidate = candidate.replace(day=min(
-                task.frequency_day_of_month,
-                _days_in_month(candidate.year, candidate.month),
-            ))
+            candidate = candidate.replace(
+                day=min(
+                    task.frequency_day_of_month,
+                    _days_in_month(candidate.year, candidate.month),
+                )
+            )
         return candidate
 
     return today
@@ -129,6 +138,8 @@ def advance_one_period(base: date, task: Task) -> date:
     """Advance a date by one period of the task's frequency."""
     freq = task.frequency_type
     value = task.frequency_value
+    if freq != FrequencyType.ONCE and value <= 0:
+        raise ValueError("frequency_value must be greater than zero")
 
     if freq == FrequencyType.DAILY:
         return base + timedelta(days=value)
@@ -139,10 +150,12 @@ def advance_one_period(base: date, task: Task) -> date:
     if freq == FrequencyType.MONTHLY:
         result = _add_months(base, value)
         if task.frequency_day_of_month:
-            result = result.replace(day=min(
-                task.frequency_day_of_month,
-                _days_in_month(result.year, result.month),
-            ))
+            result = result.replace(
+                day=min(
+                    task.frequency_day_of_month,
+                    _days_in_month(result.year, result.month),
+                )
+            )
         return result
 
     if freq == FrequencyType.DAY_OF_WEEK:
@@ -190,8 +203,20 @@ def fast_forward_to(base: date, task: Task, target: date) -> date:
         months_gap = (target.year - base.year) * 12 + (target.month - base.month)
         periods = max(0, months_gap // value - 1)
         if periods > 0:
+            day = task.frequency_day_of_month or base.day
+            if not task.frequency_day_of_month and day > 28:
+                # Month clamping persists without an explicit day. Gregorian
+                # month lengths repeat after 400 years (4800 months).
+                for period in range(1, min(periods, 4800) + 1):
+                    day = min(day, _add_months(base, period * value).day)
+                    if day == 28:
+                        break
             base = _add_months(base, periods * value)
+            base = base.replace(day=min(day, _days_in_month(base.year, base.month)))
     elif freq == FrequencyType.DAY_OF_WEEK and value > 0:
+        if not task.frequency_days_of_week:
+            # advance_one_period uses a daily fallback when no days are set.
+            return target
         days_gap = (target - base).days
         # Each cycle is value weeks
         periods = max(0, days_gap // (7 * value) - 1)

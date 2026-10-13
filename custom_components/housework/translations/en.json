@@ -82,7 +82,9 @@
         }
       },
       "error": {
-        "days_of_week_required": "Select at least one weekday for this frequency."
+        "days_of_week_required": "Select at least one weekday for this frequency.",
+        "title_required": "Enter a task name.",
+        "frequency_value_invalid": "Enter a whole number from 1 to 365 for the interval."
       },
       "abort": {
         "reconfigure_successful": "Task updated successfully."
@@ -218,6 +220,7 @@
     "task_not_found": { "message": "Task not found for the specified entity." },
     "integration_not_found": { "message": "Housework integration not found." },
     "days_of_week_required": { "message": "Select at least one weekday for this frequency." },
-    "assignee_not_allowed": { "message": "Selected assignee is not configured for this task." }
+    "assignee_not_allowed": { "message": "Selected assignee is not configured for this task." },
+    "invalid_task_configuration": { "message": "The configuration of task '{title}' is invalid. Check its frequency and due date." }
   }
 }

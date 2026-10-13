@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 from datetime import date, datetime, timedelta
 
@@ -17,6 +18,8 @@ from .coordinator import HouseworkCoordinator
 from .entity import hub_device_info
 from .models import Task
 from .scheduling import advance_one_period, fast_forward_to
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -66,45 +69,60 @@ class HouseworkCalendar(CoordinatorEntity[HouseworkCoordinator], CalendarEntity)
         end_date: datetime,
     ) -> list[CalendarEvent]:
         """Return events within the given date range."""
-        if not self.coordinator.data:
+        if not self.coordinator.data or end_date <= start_date:
             return []
 
-        range_start = start_date.date()
-        range_end = end_date.date()
+        range_start = dt_util.as_local(start_date).date()
+        range_end = dt_util.as_local(end_date).date()
         events: list[CalendarEvent] = []
-        max_projections = 52
 
         for task in self.coordinator.data.values():
             if not task.next_due:
                 continue
 
             try:
+                if task.frequency_type != FrequencyType.ONCE and (
+                    isinstance(task.frequency_value, bool)
+                    or not isinstance(task.frequency_value, int)
+                    or task.frequency_value <= 0
+                ):
+                    raise ValueError("frequency_value must be a positive integer")
                 due = date.fromisoformat(task.next_due)
-            except (ValueError, TypeError):
+                # Fast-forward past dates far before the range.
+                if due < range_start and task.frequency_type != FrequencyType.ONCE:
+                    due = fast_forward_to(due, task, range_start)
+            except (ValueError, TypeError, OverflowError) as err:
+                _LOGGER.warning("Cannot project calendar for task %s: %s", task.id, err)
                 continue
 
-            # Fast-forward past dates far before the range
-            if due < range_start and task.frequency_type != FrequencyType.ONCE:
-                due = fast_forward_to(due, task, range_start)
-
             current_due = due
-            count = 0
-            while current_due <= range_end and count < max_projections:
-                if current_due >= range_start:
-                    events.append(_task_to_event(task, current_due, hass))
-
-                if task.frequency_type == FrequencyType.ONCE:
+            while current_due <= range_end:
+                try:
+                    event = _task_to_event(task, current_due, hass)
+                except OverflowError as err:
+                    _LOGGER.warning("Cannot represent calendar event for task %s: %s", task.id, err)
                     break
-                current_due = advance_one_period(current_due, task)
-                count += 1
+                if event.end_datetime_local > start_date and event.start_datetime_local < end_date:
+                    events.append(event)
+
+                if task.frequency_type == FrequencyType.ONCE or current_due >= range_end:
+                    break
+                try:
+                    current_due = advance_one_period(current_due, task)
+                except (ValueError, TypeError, OverflowError) as err:
+                    _LOGGER.warning(
+                        "Cannot project calendar after %s for task %s: %s",
+                        current_due,
+                        task.id,
+                        err,
+                    )
+                    break
 
         events.sort(key=lambda e: e.start)
         return events
 
 
-def _task_to_event(
-    task: Task, due_date: date, hass: HomeAssistant
-) -> CalendarEvent:
+def _task_to_event(task: Task, due_date: date, hass: HomeAssistant) -> CalendarEvent:
     """Convert a task + due date to a CalendarEvent."""
     summary = task.title
     if task.current_assignee:

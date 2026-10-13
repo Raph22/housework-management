@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 import voluptuous as vol
-
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -35,9 +34,9 @@ from .const import (
     DEFAULT_ASSIGNMENT_STRATEGY,
     DEFAULT_PRIORITY,
     DOMAIN,
-    FrequencyType,
     FREQUENCY_TYPES,
     SCHEDULING_MODES,
+    FrequencyType,
 )
 
 
@@ -57,9 +56,7 @@ def _task_form_schema(
                     translation_key="frequency_type",
                 )
             ),
-            vol.Optional(
-                "frequency_value", default=d.get("frequency_value", 1)
-            ): NumberSelector(
+            vol.Optional("frequency_value", default=d.get("frequency_value", 1)): NumberSelector(
                 NumberSelectorConfig(min=1, max=365, mode=NumberSelectorMode.BOX)
             ),
             vol.Optional(
@@ -75,9 +72,7 @@ def _task_form_schema(
             vol.Optional(
                 "frequency_day_of_month",
                 description={"suggested_value": d.get("frequency_day_of_month")},
-            ): NumberSelector(
-                NumberSelectorConfig(min=1, max=31, mode=NumberSelectorMode.BOX)
-            ),
+            ): NumberSelector(NumberSelectorConfig(min=1, max=31, mode=NumberSelectorMode.BOX)),
             vol.Optional(
                 "next_due",
                 description={"suggested_value": d.get("next_due")},
@@ -98,9 +93,7 @@ def _task_form_schema(
                     translation_key="priority",
                 )
             ),
-            vol.Optional(
-                "assignees", default=d.get("assignees", [])
-            ): EntitySelector(
+            vol.Optional("assignees", default=d.get("assignees", [])): EntitySelector(
                 EntitySelectorConfig(domain="person", multiple=True)
             ),
             vol.Optional(
@@ -116,14 +109,10 @@ def _task_form_schema(
                 "area",
                 description={"suggested_value": d.get("area")},
             ): AreaSelector(),
-            vol.Optional(
-                "description", default=d.get("description", "")
-            ): TextSelector(
+            vol.Optional("description", default=d.get("description", "")): TextSelector(
                 TextSelectorConfig(multiline=True)
             ),
-            vol.Optional(
-                "icon", default=d.get("icon", "mdi:broom")
-            ): IconSelector(),
+            vol.Optional("icon", default=d.get("icon", "mdi:broom")): IconSelector(),
         }
     )
 
@@ -131,6 +120,7 @@ def _task_form_schema(
 def _clean_task_data(user_input: dict[str, Any]) -> dict[str, Any]:
     """Clean and normalize task form data for storage."""
     data = dict(user_input)
+    data["title"] = data["title"].strip()
     if "priority" in data:
         data["priority"] = int(data["priority"])
     if "frequency_value" in data:
@@ -142,17 +132,24 @@ def _clean_task_data(user_input: dict[str, Any]) -> dict[str, Any]:
             del data["frequency_day_of_month"]
     if "frequency_days_of_week" in data:
         # Keep as strings to match SelectSelector options for display
-        data["frequency_days_of_week"] = [
-            str(d) for d in data["frequency_days_of_week"]
-        ]
+        data["frequency_days_of_week"] = [str(d) for d in data["frequency_days_of_week"]]
     return data
 
 
 def _validate_task_data(data: dict[str, Any]) -> str | None:
-    """Validate task configuration after normalization."""
+    """Validate task configuration before numeric normalization."""
+    if not isinstance(data.get("title"), str) or not data["title"].strip():
+        return "title_required"
+    value = data.get("frequency_value", 1)
     if (
-        data.get("frequency_type") == FrequencyType.DAY_OF_WEEK
-        and not data.get("frequency_days_of_week")
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or value < 1
+        or not float(value).is_integer()
+    ):
+        return "frequency_value_invalid"
+    if data.get("frequency_type") == FrequencyType.DAY_OF_WEEK and not data.get(
+        "frequency_days_of_week"
     ):
         return "days_of_week_required"
     return None
@@ -163,9 +160,7 @@ class HouseworkConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the initial step."""
         await self.async_set_unique_id(DOMAIN)
         self._abort_if_unique_id_configured()
@@ -196,9 +191,7 @@ class HouseworkConfigFlow(ConfigFlow, domain=DOMAIN):
 class HouseworkOptionsFlow(OptionsFlow):
     """Handle options for Housework."""
 
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
             data = dict(user_input)
@@ -224,10 +217,12 @@ class HouseworkOptionsFlow(OptionsFlow):
                     ),
                     vol.Optional(
                         "default_priority",
-                        default=str(self.config_entry.options.get(
-                            "default_priority",
-                            DEFAULT_PRIORITY,
-                        )),
+                        default=str(
+                            self.config_entry.options.get(
+                                "default_priority",
+                                DEFAULT_PRIORITY,
+                            )
+                        ),
                     ): SelectSelector(
                         SelectSelectorConfig(
                             options=["1", "2", "3", "4"],
@@ -242,18 +237,16 @@ class HouseworkOptionsFlow(OptionsFlow):
 class TaskSubentryFlowHandler(ConfigSubentryFlow):
     """Handle subentry flow for adding/editing a housework task."""
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> SubentryFlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
         """Handle adding a new task."""
         if user_input is not None:
-            data = _clean_task_data(user_input)
-            if error := _validate_task_data(data):
+            if error := _validate_task_data(user_input):
                 return self.async_show_form(
                     step_id="user",
-                    data_schema=_task_form_schema(defaults=data),
+                    data_schema=_task_form_schema(defaults=user_input),
                     errors={"base": error},
                 )
+            data = _clean_task_data(user_input)
             return self.async_create_entry(
                 title=data["title"],
                 data=data,
@@ -261,7 +254,14 @@ class TaskSubentryFlowHandler(ConfigSubentryFlow):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=_task_form_schema(),
+            data_schema=_task_form_schema(
+                defaults={
+                    "priority": self._get_entry().options.get("default_priority", DEFAULT_PRIORITY),
+                    "assignment_strategy": self._get_entry().options.get(
+                        "default_assignment_strategy", DEFAULT_ASSIGNMENT_STRATEGY
+                    ),
+                }
+            ),
         )
 
     async def async_step_reconfigure(
@@ -272,28 +272,41 @@ class TaskSubentryFlowHandler(ConfigSubentryFlow):
         entry = self._get_entry()
 
         if user_input is not None:
-            data = _clean_task_data(user_input)
-            if error := _validate_task_data(data):
+            if error := _validate_task_data(user_input):
                 return self.async_show_form(
                     step_id="reconfigure",
-                    data_schema=_task_form_schema(defaults=data),
+                    data_schema=_task_form_schema(defaults=user_input),
                     errors={"base": error},
                 )
-            return self.async_update_and_abort(
+            data = _clean_task_data(user_input)
+            runtime_data = getattr(entry, "runtime_data", None)
+            explicit_once_due = data.get("frequency_type") == FrequencyType.ONCE and data.get(
+                "next_due"
+            )
+            unchanged_config = subentry.data == data and subentry.title == data["title"]
+            if runtime_data is not None and explicit_once_due:
+                # An entered date reopens a once task even when it matches its
+                # original config date, which is absent from the completed form.
+                await runtime_data.store.async_update_runtime_state(
+                    subentry.subentry_id, {"next_due": data["next_due"]}
+                )
+            result = self.async_update_and_abort(
                 self._get_entry(),
                 subentry,
                 data=data,
                 title=data.get("title", subentry.title),
             )
+            if runtime_data is not None and explicit_once_due and unchanged_config:
+                # No config change means no update listener/reload is scheduled.
+                await runtime_data.coordinator.async_refresh()
+            return result
 
         defaults = dict(subentry.data)
         runtime_data = getattr(entry, "runtime_data", None)
         if runtime_data is not None:
-            runtime_next_due = runtime_data.store.get_runtime_state(
-                subentry.subentry_id
-            ).get("next_due")
-            if runtime_next_due is not None:
-                defaults["next_due"] = runtime_next_due
+            runtime_state = runtime_data.store.get_runtime_state(subentry.subentry_id)
+            if "next_due" in runtime_state:
+                defaults["next_due"] = runtime_state["next_due"]
 
         return self.async_show_form(
             step_id="reconfigure",
