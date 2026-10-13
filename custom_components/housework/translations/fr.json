@@ -82,7 +82,9 @@
         }
       },
       "error": {
-        "days_of_week_required": "Sélectionnez au moins un jour de la semaine pour cette fréquence."
+        "days_of_week_required": "Sélectionnez au moins un jour de la semaine pour cette fréquence.",
+        "title_required": "Saisissez un nom pour la tâche.",
+        "frequency_value_invalid": "Saisissez un nombre entier de 1 à 365 pour l'intervalle."
       },
       "abort": {
         "reconfigure_successful": "Tâche mise à jour avec succès."
@@ -218,6 +220,7 @@
     "task_not_found": { "message": "Tâche introuvable pour l'entité spécifiée." },
     "integration_not_found": { "message": "Intégration Housework introuvable." },
     "days_of_week_required": { "message": "Sélectionnez au moins un jour de la semaine pour cette fréquence." },
-    "assignee_not_allowed": { "message": "La personne sélectionnée n'est pas configurée pour cette tâche." }
+    "assignee_not_allowed": { "message": "La personne sélectionnée n'est pas configurée pour cette tâche." },
+    "invalid_task_configuration": { "message": "La configuration de la tâche « {title} » est invalide. Vérifiez sa fréquence et son échéance." }
   }
 }

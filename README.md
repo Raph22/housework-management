@@ -26,6 +26,18 @@ Assign tasks to household members, track completions, and automate reminders —
 
 ## Installation
 
+Requires **Home Assistant 2026.10.1 or newer**. The integration is tested against
+2026.10.1; older Home Assistant releases are no longer advertised as supported.
+
+### Updating from v0.4.0
+
+Update the integration files through HACS, then restart Home Assistant. Existing
+tasks, due dates, completion history and assignee rotation are preserved. **Keep
+the existing integration entry**: removing it deletes its tasks and stored state.
+
+Installations predating the config-subentry storage format need a separate data
+migration; this release does not migrate those legacy task definitions.
+
 ### HACS (recommended)
 
 1. Add this repository as a custom repository in HACS
@@ -73,16 +85,31 @@ data:
 ### Scheduling modes
 
 - **Rolling** (default): next due date is calculated from when the task was last completed. If you complete a biweekly task 3 days late, the next occurrence is 2 weeks from now.
-- **Fixed**: next due date follows the original cadence. If a biweekly task was due Monday and you complete it Wednesday, the next is still the following Monday.
+- **Fixed**: the next due date follows the original cadence. If a biweekly task was due Monday and you complete it Wednesday, its next date remains two weeks after the original Monday. Completing or skipping an overdue occurrence advances to the next date after today.
 
 ### Completing tasks
 
 ```yaml
 service: housework.complete_task
 target:
-  entity_id: binary_sensor.housework_clean_bathroom
+  entity_id: binary_sensor.clean_bathroom_due
 data:
   completed_by: person.alice
+```
+
+Entity IDs depend on task names, your interface language and any manual renaming.
+Use the IDs shown in your Home Assistant instance in the examples below. Replace
+`notify.mobile_app_your_phone` with your phone's actual notification action.
+
+Targets can also be task devices, areas or native labels. Each task is processed
+once even when several of its entities match. Non-Housework entities reached
+through an area or label are ignored; explicitly targeting an invalid entity
+rejects the action before any task is changed.
+
+```yaml
+action: housework.complete_task
+target:
+  label_id: weekly_chores
 ```
 
 ### Other services
@@ -115,7 +142,7 @@ Use HA's native labels (Settings > Labels) to categorize tasks — assign labels
 
 ### Global entities (Housework hub device)
 
-- `calendar.housework` — all tasks as events, including projected future occurrences
+- `calendar.housework_housework` — all tasks as events, including projected future occurrences (the generated ID can vary with language or renaming)
 - `sensor.housework_tasks_due_today` — count of tasks due today (with task list in attributes)
 - `sensor.housework_overdue_tasks` — count of overdue tasks (with details in attributes)
 
@@ -136,16 +163,16 @@ automation:
   - alias: "Notify chore assignee"
     trigger:
       - platform: state
-        entity_id: binary_sensor.housework_clean_bathroom
+        entity_id: binary_sensor.clean_bathroom_due
         to: "on"
     action:
-      - service: notify.mobile_app
+      - service: notify.mobile_app_your_phone
         data:
           title: "Chore due"
           message: >
-            {{ state_attr('binary_sensor.housework_clean_bathroom', 'title') }}
+            {{ state_attr('binary_sensor.clean_bathroom_due', 'title') }}
             is due! Assigned to
-            {{ state_attr('binary_sensor.housework_clean_bathroom', 'assignee_name') }}.
+            {{ state_attr('binary_sensor.clean_bathroom_due', 'assignee_name') }}.
 ```
 
 ### Complete a task via NFC tag
@@ -159,7 +186,7 @@ automation:
     action:
       - service: housework.complete_task
         target:
-          entity_id: binary_sensor.housework_clean_bathroom
+          entity_id: binary_sensor.clean_bathroom_due
         data:
           completed_by: person.alice
 ```
@@ -177,7 +204,7 @@ automation:
         entity_id: sensor.housework_overdue_tasks
         above: 0
     action:
-      - service: notify.mobile_app
+      - service: notify.mobile_app_your_phone
         data:
           title: "Overdue chores"
           message: >
@@ -199,3 +226,21 @@ Task definitions are stored in HA's config entry subentries. Runtime state (due 
 ## License
 
 MIT
+
+## Development
+
+Tests use actual Home Assistant config entries, registries, services, entities and
+storage fixtures. The pinned fixture package installs Home Assistant 2026.10.1.
+Use Python **3.14.2 or newer within the 3.14 series** for this test environment.
+
+```sh
+python3.14 -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python -m pytest -q
+.venv/bin/ruff check custom_components tests
+.venv/bin/ruff format --check custom_components tests
+```
+
+GitHub Actions runs the same regression and lint checks on pushes and pull
+requests. The suite covers scheduling, task targeting, config flows, calendars,
+diagnostics and persistence through integration reloads.
