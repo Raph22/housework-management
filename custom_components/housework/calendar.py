@@ -160,7 +160,7 @@ def _find_current_or_next_event(
             continue
         try:
             due = date.fromisoformat(task.next_due)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             continue
 
         if due == today:

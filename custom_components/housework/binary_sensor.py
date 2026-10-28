@@ -106,7 +106,7 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
             return False
         try:
             due_date = date.fromisoformat(task.next_due)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return None
         return dt_util.now().date() >= due_date
 
@@ -121,7 +121,7 @@ class HouseworkTaskSensor(CoordinatorEntity[HouseworkCoordinator], BinarySensorE
             try:
                 due_date = date.fromisoformat(task.next_due)
                 days_overdue = (dt_util.now().date() - due_date).days
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
 
         assignee_name = None

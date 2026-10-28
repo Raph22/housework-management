@@ -26,17 +26,9 @@ Assign tasks to household members, track completions, and automate reminders —
 
 ## Installation
 
-Requires **Home Assistant 2026.10.1 or newer**. The integration is tested against
-2026.10.1; older Home Assistant releases are no longer advertised as supported.
-
-### Updating from v0.4.0
-
-Update the integration files through HACS, then restart Home Assistant. Existing
-tasks, due dates, completion history and assignee rotation are preserved. **Keep
-the existing integration entry**: removing it deletes its tasks and stored state.
-
-Installations predating the config-subentry storage format need a separate data
-migration; this release does not migrate those legacy task definitions.
+Requires **Home Assistant 2026.10.1 or newer**. The integration uses the current
+Home Assistant APIs and is tested against 2026.10.1. Follow the steps below for a
+new installation.
 
 ### HACS (recommended)
 

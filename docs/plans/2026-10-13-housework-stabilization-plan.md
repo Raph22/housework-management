@@ -4,7 +4,7 @@
 
 **Goal:** Fix the defects documented by the 13 October audit and make the existing integration reproducibly testable on current Home Assistant.
 
-**Architecture:** Preserve config subentries and the current runtime storage schema. Validate and deduplicate targets before updates, centralize completion, use HA timezone handling, and flush persistent state across lifecycle boundaries. Independent file groups can be implemented in parallel with test-first regression checks.
+**Architecture:** Use config subentries and runtime storage for fresh installations on HA 2026.10.1. Validate and deduplicate targets before updates, centralize completion, use HA timezone handling, and flush persistent state across lifecycle boundaries. Independent file groups can be implemented in parallel with test-first regression checks. The user confirmed that there are no existing installations or historical compatibility requirements.
 
 **Tech Stack:** Python 3.14, Home Assistant, pytest-homeassistant-custom-component, pytest, Ruff, GitHub Actions.
 
@@ -44,4 +44,4 @@ Reproduce delayed-save/reload behavior using actual HA Store and config-entry fi
 
 Files: `README.md`, `hacs.json`, `custom_components/housework/manifest.json`, `CHANGELOG.md`, `LICENSE`.
 
-Document supported HA and Python versions, exact test commands and upgrade preservation for the existing storage format. Prepare a corrected version with factual release notes. Add the MIT license already stated in the README. Run the full regression suite, Ruff and JSON checks. Obtain independent specification and quality review, resolve actionable findings, then run the final checks on the final diff. Keep the resulting changes reviewable in the original workspace; external publication is a separate finishing action.
+Document supported HA and Python versions, first installation and exact test commands. Prepare a corrected version with factual release notes. Add the MIT license already stated in the README. Run the full regression suite, Ruff and JSON checks. Obtain independent specification and quality review, resolve actionable findings, then run the final checks on the final diff. After the user's publication approval, merge the PR and publish v0.5.0.

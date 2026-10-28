@@ -98,7 +98,7 @@ class HouseworkNextDueSensor(CoordinatorEntity[HouseworkCoordinator], SensorEnti
             return None
         try:
             return date.fromisoformat(task.next_due)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return None
 
 
@@ -145,7 +145,7 @@ class HouseworkDueTodaySensor(CoordinatorEntity[HouseworkCoordinator], SensorEnt
     def _parse_date(s: str) -> date | None:
         try:
             return date.fromisoformat(s)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return None
 
 
@@ -176,7 +176,7 @@ class HouseworkOverdueSensor(CoordinatorEntity[HouseworkCoordinator], SensorEnti
             try:
                 due = date.fromisoformat(task.next_due)
                 days = (today - due).days
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 days = 0
             task_details.append({"title": task.title, "days_overdue": days})
 
@@ -196,7 +196,7 @@ class HouseworkOverdueSensor(CoordinatorEntity[HouseworkCoordinator], SensorEnti
                 continue
             try:
                 due = date.fromisoformat(task.next_due)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 continue
             if due < today:
                 result.append(task)

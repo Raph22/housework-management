@@ -3,8 +3,8 @@
 from copy import deepcopy
 from types import SimpleNamespace
 
+import probatio as vol
 import pytest
-import voluptuous as vol
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.selector import NumberSelector
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -210,14 +210,14 @@ async def test_skip_immediately_after_snooze_uses_snoozed_date(
 
 
 @pytest.mark.parametrize("service", ["complete_task", "skip_task"])
-@pytest.mark.parametrize("invalid_case", ["legacy_zero", "date_overflow"])
+@pytest.mark.parametrize("invalid_case", ["invalid_interval", "date_overflow"])
 async def test_invalid_schedule_rejects_whole_batch_before_mutation(
     hass,
     housework_runtime,
     service,
     invalid_case,
 ):
-    """An old invalid interval or overflowing date must not consume earlier tasks."""
+    """An invalid interval or overflowing date must not consume earlier tasks."""
     runtime = housework_runtime
     await _set_invalid_schedule(hass, runtime, invalid_case)
     state_before = deepcopy(runtime.store.get_all_runtime_state())
@@ -247,7 +247,7 @@ async def test_invalid_schedule_rejects_whole_batch_before_mutation(
     assert raised.value.translation_key == "invalid_task_configuration"
 
 
-@pytest.mark.parametrize("invalid_case", ["legacy_zero", "date_overflow"])
+@pytest.mark.parametrize("invalid_case", ["invalid_interval", "date_overflow"])
 async def test_button_invalid_schedule_has_clear_error_without_mutation(
     hass,
     housework_runtime,
@@ -267,10 +267,10 @@ async def test_button_invalid_schedule_has_clear_error_without_mutation(
 
 
 @pytest.mark.parametrize("service", ["remove_task", "snooze_task"])
-async def test_invalid_legacy_interval_can_be_managed(hass, housework_runtime, service):
-    """Users can still remove or postpone a task with an old zero interval."""
+async def test_invalid_interval_can_be_managed(hass, housework_runtime, service):
+    """Users can remove or postpone a task with an invalid interval."""
     runtime = housework_runtime
-    await _set_invalid_schedule(hass, runtime, "legacy_zero")
+    await _set_invalid_schedule(hass, runtime, "invalid_interval")
     await hass.services.async_call(
         DOMAIN,
         service,
@@ -284,14 +284,14 @@ async def test_invalid_legacy_interval_can_be_managed(hass, housework_runtime, s
 
 
 async def _set_invalid_schedule(hass, runtime, invalid_case):
-    """Load the kind of interval accepted by 0.4, or an extreme fixed due date."""
+    """Set an invalid interval or an extreme fixed due date."""
     subentry = runtime.entry.subentries["task-b"]
     hass.config_entries.async_update_subentry(
         runtime.entry,
         subentry,
         data={
             **subentry.data,
-            "frequency_value": 0 if invalid_case == "legacy_zero" else 1,
+            "frequency_value": 0 if invalid_case == "invalid_interval" else 1,
             "scheduling_mode": "fixed",
         },
     )

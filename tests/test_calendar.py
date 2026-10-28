@@ -129,14 +129,14 @@ async def test_events_sorted_and_malformed_dates_skipped(hass: HomeAssistant) ->
 
 
 @pytest.mark.parametrize("invalid_due", ["2026-10-01", "2026-10-13"])
-async def test_legacy_zero_frequency_does_not_hide_valid_tasks(
+async def test_invalid_frequency_does_not_hide_valid_tasks(
     hass: HomeAssistant, caplog: pytest.LogCaptureFixture, invalid_due: str
 ) -> None:
-    """Invalid pre-0.5 recurrence data is isolated before making any events."""
+    """Invalid recurrence data is isolated before making any events."""
     calendar = make_calendar(
         hass,
         Task(
-            id="legacy-zero",
+            id="invalid-interval",
             title="Invalid",
             frequency_type=FrequencyType.DAILY,
             frequency_value=0,
@@ -148,7 +148,7 @@ async def test_legacy_zero_frequency_does_not_hide_valid_tasks(
         hass, datetime(2026, 10, 13, tzinfo=PARIS), datetime(2026, 10, 14, tzinfo=PARIS)
     )
     assert [event.summary for event in events] == ["Valid"]
-    assert "legacy-zero" in caplog.text
+    assert "invalid-interval" in caplog.text
 
 
 async def test_next_period_overflow_preserves_requested_occurrence(
