@@ -2,23 +2,16 @@
 
 from __future__ import annotations
 
-import logging
-from datetime import datetime, timezone
-
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .assignment import determine_next_assignee, update_assignment_state
-from .const import CompletionAction, FrequencyType
-from .coordinator import HouseworkCoordinator, SUBENTRY_TYPE_TASK
+from .actions import async_complete_task
+from .coordinator import SUBENTRY_TYPE_TASK, HouseworkCoordinator
 from .entity import task_device_info
-from .models import CompletionRecord, Task
-from .scheduling import calculate_next_due
-
-_LOGGER = logging.getLogger(__name__)
+from .models import Task
 
 
 async def async_setup_entry(
@@ -36,9 +29,7 @@ async def async_setup_entry(
         if not coordinator.data:
             known_task_ids.clear()
             return
-        known_task_ids.difference_update(
-            known_task_ids - set(coordinator.data.keys())
-        )
+        known_task_ids.difference_update(known_task_ids - set(coordinator.data.keys()))
         for task_id, task in coordinator.data.items():
             if task_id not in known_task_ids:
                 known_task_ids.add(task_id)
@@ -91,47 +82,9 @@ class HouseworkMarkDoneButton(CoordinatorEntity[HouseworkCoordinator], ButtonEnt
         if task is None:
             return
 
-        store = self.coordinator.store
-        completed_at = datetime.now(timezone.utc).isoformat()
-        completed_by = task.current_assignee or ""
-
-        # Record history
-        record = CompletionRecord(
-            task_id=task.id,
-            completed_by=completed_by,
-            completed_at=completed_at,
-            action=CompletionAction.COMPLETED,
+        await async_complete_task(
+            self.hass,
+            task,
+            self.coordinator.store,
+            self.coordinator,
         )
-        await store.async_add_history(record)
-
-        # Calculate next due
-        runtime_updates: dict = {"last_completed": completed_at}
-        if task.frequency_type != FrequencyType.ONCE:
-            next_due = calculate_next_due(task, last_completed_override=completed_at)
-            runtime_updates["next_due"] = next_due.isoformat() if next_due else None
-        else:
-            runtime_updates["next_due"] = None
-
-        # Update assignment
-        current_assignee = task.current_assignee
-        if completed_by and task.assignees:
-            state = store.get_assignment_state(task.id)
-            state = update_assignment_state(state, completed_by)
-            current_assignee = determine_next_assignee(task, state)
-            await store.async_update_assignment_state(task.id, state)
-        runtime_updates["current_assignee"] = current_assignee
-
-        await store.async_update_runtime_state(task.id, runtime_updates)
-        await self.coordinator.async_request_refresh()
-
-        # Fire event
-        self.hass.bus.async_fire(
-            "housework_task_completed",
-            {
-                "task_id": task.id,
-                "title": task.title,
-                "completed_by": completed_by,
-                "next_due": runtime_updates["next_due"],
-            },
-        )
-        _LOGGER.info("Completed task via button: %s", task.title)

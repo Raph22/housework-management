@@ -11,8 +11,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
-from .coordinator import HouseworkCoordinator, SUBENTRY_TYPE_TASK
+from .coordinator import SUBENTRY_TYPE_TASK, HouseworkCoordinator
 from .entity import hub_device_info, task_device_info
 from .models import Task
 
@@ -26,10 +25,12 @@ async def async_setup_entry(
     coordinator = entry.runtime_data.coordinator
 
     # Global hub sensors
-    async_add_entities([
-        HouseworkDueTodaySensor(coordinator),
-        HouseworkOverdueSensor(coordinator),
-    ])
+    async_add_entities(
+        [
+            HouseworkDueTodaySensor(coordinator),
+            HouseworkOverdueSensor(coordinator),
+        ]
+    )
 
     # Per-task next_due sensors
     known_task_ids: set[str] = set()
@@ -39,9 +40,7 @@ async def async_setup_entry(
         if not coordinator.data:
             known_task_ids.clear()
             return
-        known_task_ids.difference_update(
-            known_task_ids - set(coordinator.data.keys())
-        )
+        known_task_ids.difference_update(known_task_ids - set(coordinator.data.keys()))
         for task_id, task in coordinator.data.items():
             if task_id not in known_task_ids:
                 known_task_ids.add(task_id)
@@ -99,7 +98,7 @@ class HouseworkNextDueSensor(CoordinatorEntity[HouseworkCoordinator], SensorEnti
             return None
         try:
             return date.fromisoformat(task.next_due)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return None
 
 
@@ -137,16 +136,16 @@ class HouseworkDueTodaySensor(CoordinatorEntity[HouseworkCoordinator], SensorEnt
             return []
         today = dt_util.now().date()
         return [
-            task for task in self.coordinator.data.values()
-            if task.next_due
-            and self._parse_date(task.next_due) == today
+            task
+            for task in self.coordinator.data.values()
+            if task.next_due and self._parse_date(task.next_due) == today
         ]
 
     @staticmethod
     def _parse_date(s: str) -> date | None:
         try:
             return date.fromisoformat(s)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return None
 
 
@@ -177,7 +176,7 @@ class HouseworkOverdueSensor(CoordinatorEntity[HouseworkCoordinator], SensorEnti
             try:
                 due = date.fromisoformat(task.next_due)
                 days = (today - due).days
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 days = 0
             task_details.append({"title": task.title, "days_overdue": days})
 
@@ -197,7 +196,7 @@ class HouseworkOverdueSensor(CoordinatorEntity[HouseworkCoordinator], SensorEnti
                 continue
             try:
                 due = date.fromisoformat(task.next_due)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 continue
             if due < today:
                 result.append(task)

@@ -25,9 +25,7 @@ class HouseworkStore:
 
     def __init__(self, hass: HomeAssistant) -> None:
         """Initialize the store."""
-        self._store = Store[dict[str, Any]](
-            hass, STORAGE_VERSION, STORAGE_KEY
-        )
+        self._store = Store[dict[str, Any]](hass, STORAGE_VERSION, STORAGE_KEY)
         self._runtime_state: dict[str, dict[str, Any]] = {}
         self._history: list[CompletionRecord] = []
         self._assignment_state: dict[str, dict] = {}
@@ -48,6 +46,10 @@ class HouseworkStore:
     async def async_remove(self) -> None:
         """Remove the storage file."""
         await self._store.async_remove()
+
+    async def async_save(self) -> None:
+        """Persist current state and cancel pending delayed writes before unload."""
+        await self._store.async_save(self._data_to_save())
 
     @callback
     def _async_schedule_save(self) -> None:
@@ -72,9 +74,7 @@ class HouseworkStore:
         """Return runtime state for all tasks."""
         return dict(self._runtime_state)
 
-    async def async_update_runtime_state(
-        self, task_id: str, updates: dict[str, Any]
-    ) -> None:
+    async def async_update_runtime_state(self, task_id: str, updates: dict[str, Any]) -> None:
         """Update runtime state for a task."""
         state = self._runtime_state.setdefault(task_id, {})
         state.update(updates)
@@ -119,9 +119,7 @@ class HouseworkStore:
         """Return assignment state for all tasks."""
         return dict(self._assignment_state)
 
-    async def async_update_assignment_state(
-        self, task_id: str, state: dict
-    ) -> None:
+    async def async_update_assignment_state(self, task_id: str, state: dict) -> None:
         """Update assignment state for a task."""
         self._assignment_state[task_id] = state
         self._async_schedule_save()

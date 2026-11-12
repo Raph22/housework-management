@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 import logging
+from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .const import DOMAIN, SCHEDULING_FIELDS
+from .const import DOMAIN, SCHEDULING_FIELDS, FrequencyType
 from .models import Task
 from .scheduling import calculate_initial_due, calculate_next_due
 from .store import HouseworkStore
@@ -39,12 +39,14 @@ def _resolve_reconfigured_next_due(
         return explicit_next_due
 
     task = Task.from_subentry("reconfigured", subentry_data, runtime_state)
+    if task.frequency_type == FrequencyType.ONCE:
+        # A missing occurrence is the terminal state of a completed/skipped
+        # one-time task. Recurring-to-once conversion keeps its existing date.
+        return task.next_due
     if task.last_completed:
         next_due = calculate_next_due(task)
     else:
-        next_due = calculate_initial_due(
-            Task.from_subentry("reconfigured", subentry_data)
-        )
+        next_due = calculate_initial_due(Task.from_subentry("reconfigured", subentry_data))
 
     return next_due.isoformat() if next_due else None
 

@@ -13,6 +13,9 @@ REDACT_KEYS = {
     "current_assignee",
     "completed_by",
     "last_assignee",
+    # Person entity IDs are dictionary keys here, not values. Redact the whole
+    # mapping because async_redact_data cannot anonymize keys without collisions.
+    "completion_counts",
 }
 
 
@@ -32,8 +35,7 @@ async def async_get_config_entry_diagnostics(
         "data": dict(entry.data),
         "options": dict(entry.options),
         "subentries": {
-            subentry_id: dict(subentry.data)
-            for subentry_id, subentry in entry.subentries.items()
+            subentry_id: dict(subentry.data) for subentry_id, subentry in entry.subentries.items()
         },
         "runtime_state": runtime_state,
         "assignment_state": assignment_state,

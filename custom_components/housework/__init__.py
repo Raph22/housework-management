@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -57,9 +57,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HouseworkConfigEntry) ->
     return True
 
 
-async def _async_options_updated(
-    hass: HomeAssistant, entry: HouseworkConfigEntry
-) -> None:
+async def _async_options_updated(hass: HomeAssistant, entry: HouseworkConfigEntry) -> None:
     """Reload the integration when options are updated."""
     await hass.config_entries.async_reload(entry.entry_id)
 
@@ -68,6 +66,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: HouseworkConfigEntry) -
     """Unload a Housework config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
+        await entry.runtime_data.store.async_save()
         remaining_entries = [
             existing
             for existing in hass.config_entries.async_entries(DOMAIN)

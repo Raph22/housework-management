@@ -10,8 +10,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
-from .coordinator import HouseworkCoordinator, SUBENTRY_TYPE_TASK
+from .coordinator import SUBENTRY_TYPE_TASK, HouseworkCoordinator
 from .entity import task_device_info
 from .models import Task
 
@@ -41,9 +40,7 @@ async def async_setup_entry(
         if not coordinator.data:
             known_task_ids.clear()
             return
-        known_task_ids.difference_update(
-            known_task_ids - set(coordinator.data.keys())
-        )
+        known_task_ids.difference_update(known_task_ids - set(coordinator.data.keys()))
         for task_id, task in coordinator.data.items():
             if task_id not in known_task_ids:
                 known_task_ids.add(task_id)
@@ -119,8 +116,6 @@ class HouseworkPrioritySelect(CoordinatorEntity[HouseworkCoordinator], SelectEnt
 
         new_data = dict(subentry.data)
         new_data["priority"] = new_priority
-        self.hass.config_entries.async_update_subentry(
-            self._entry, subentry, data=new_data
-        )
+        self.hass.config_entries.async_update_subentry(self._entry, subentry, data=new_data)
         await self.coordinator.async_request_refresh()
         _LOGGER.info("Changed priority of %s to P%s", task.title, new_priority)
